@@ -1,0 +1,387 @@
+-- -----------------------------------------------------------------------
+-- BEGIN pending schema migration to postgres
+-- -----------------------------------------------------------------------
+
+
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-- NOT DONE YET
+-
+--
+-- Table structure for table l3vpn_rib
+--
+DROP TABLE IF EXISTS l3vpn_rib;
+CREATE TABLE l3vpn_rib (
+  hash_id char(32) NOT NULL,
+  path_attr_hash_id char(32) NOT NULL,
+  peer_hash_id char(32) NOT NULL,
+  isIPv4 tinyint(4) NOT NULL,
+  origin_as int(10) unsigned NOT NULL,
+  rd varchar(30) NOT NULL,
+  prefix varchar(40) NOT NULL,
+  prefix_len int(10) unsigned NOT NULL,
+  prefix_bin varbinary(16) NOT NULL,
+  prefix_bcast_bin varbinary(16) NOT NULL,
+  timestamp timestamp(6) NOT NULL DEFAULT current_timestamp(6),
+  first_added_timestamp timestamp(6) NOT NULL DEFAULT current_timestamp(6),
+  isWithdrawn bit(1) NOT NULL DEFAULT b'0',
+  prefix_bits varchar(128) DEFAULT NULL,
+  path_id int(10) unsigned DEFAULT NULL,
+  labels varchar(255) DEFAULT NULL,
+  isPrePolicy tinyint(4) NOT NULL DEFAULT 1,
+  isAdjRibIn tinyint(4) NOT NULL DEFAULT 1,
+  PRIMARY KEY (hash_id,peer_hash_id,isPrePolicy,isAdjRibIn),
+  KEY idx_peer_id (peer_hash_id),
+  KEY idx_path_id (path_attr_hash_id),
+  KEY idx_prefix (prefix),
+  KEY idx_rd (rd),
+  KEY idx_prefix_len (prefix_len),
+  KEY idx_prefix_bin (prefix_bin),
+  KEY idx_addr_type (isIPv4),
+  KEY idx_isWithdrawn (isWithdrawn),
+  KEY idx_origin_as (origin_as),
+  KEY idx_ts (timestamp),
+  KEY idx_prefix_bits (prefix_bits),
+  KEY idx_first_added_ts (first_added_timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+  PARTITION BY KEY (peer_hash_id)
+  PARTITIONS 48;
+
+DELIMITER ;;
+CREATE  TRIGGER l3vpn_rib_pre_update BEFORE UPDATE on l3vpn_rib
+FOR EACH ROW
+  BEGIN
+
+    IF ( @TRIGGER_DISABLED is null OR @TRIGGER_DISABLED = FALSE ) THEN
+
+
+      IF (new.hash_id = old.hash_id AND new.peer_hash_id = old.peer_hash_id) THEN
+        IF (new.isWithdrawn = False) THEN
+          IF (old.path_attr_hash_id != new.path_attr_hash_id AND old.path_attr_hash_id != '') THEN
+
+            INSERT IGNORE INTO l3vpn_log (type,rd,prefix,prefix_len,path_attr_hash_id,peer_hash_id,timestamp)
+            VALUES ('changed', old.rd, old.prefix,old.prefix_len,old.path_attr_hash_id,
+                    old.peer_hash_id,old.timestamp);
+          END IF;
+
+
+          IF (old.isWithdrawn = True AND old.timestamp < date_sub(new.timestamp, INTERVAL 6 HOUR)) THEN
+            SET new.first_added_timestamp = current_timestamp(6);
+          END IF;
+
+        ELSE
+
+          INSERT IGNORE INTO l3vpn_log
+          (type,rd,prefix,prefix_len,peer_hash_id,path_attr_hash_id,timestamp)
+          VALUES ('withdrawn', old.rd, old.prefix,old.prefix_len,old.peer_hash_id,
+                  old.path_attr_hash_id,new.timestamp);
+        END IF;
+
+      END IF;
+    END IF;
+  END ;;
+DELIMITER ;
+
+--
+-- Table structure for table l3vpn_log
+--
+DROP TABLE IF EXISTS l3vpn_log;
+CREATE TABLE l3vpn_log (
+  peer_hash_id char(32) NOT NULL,
+  type enum('withdrawn','changed') NOT NULL,
+  prefix varchar(40) NOT NULL,
+  rd varchar(30) NOT NULL,
+  prefix_len int(10) unsigned NOT NULL,
+  timestamp datetime(6) NOT NULL DEFAULT current_timestamp(6) ON UPDATE current_timestamp(6),
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  path_attr_hash_id char(32) NOT NULL DEFAULT '',
+  PRIMARY KEY (id,peer_hash_id,timestamp),
+  KEY idx_prefix (prefix,prefix_len),
+  KEY idx_rd (rd),
+  KEY idx_type (type),
+  KEY idx_ts (timestamp),
+  KEY idx_peer_hash_id (peer_hash_id)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
+  PARTITION BY RANGE  COLUMNS(timestamp)
+  SUBPARTITION BY KEY (peer_hash_id)
+  SUBPARTITIONS 32
+  (
+  PARTITION p2018_01 VALUES LESS THAN ('2018-02-01') ENGINE = InnoDB,
+  PARTITION p2018_02 VALUES LESS THAN ('2018-03-01') ENGINE = InnoDB,
+  PARTITION p2018_03 VALUES LESS THAN ('2018-04-01') ENGINE = InnoDB,
+  PARTITION p2018_04 VALUES LESS THAN ('2018-05-01') ENGINE = InnoDB,
+  PARTITION p2018_05 VALUES LESS THAN ('2018-06-01') ENGINE = InnoDB,
+  PARTITION p2018_06 VALUES LESS THAN ('2018-07-01') ENGINE = InnoDB,
+  PARTITION p2018_07 VALUES LESS THAN ('2018-08-01') ENGINE = InnoDB,
+  PARTITION p2018_08 VALUES LESS THAN ('2018-09-01') ENGINE = InnoDB,
+  PARTITION p2018_09 VALUES LESS THAN ('2018-10-01') ENGINE = InnoDB,
+  PARTITION p2018_10 VALUES LESS THAN ('2018-11-01') ENGINE = InnoDB,
+  PARTITION pOther VALUES LESS THAN (MAXVALUE) ENGINE = InnoDB);
+
+--
+-- Table structure for table gen_asn_stats
+--
+DROP TABLE IF EXISTS gen_asn_stats;
+CREATE TABLE gen_asn_stats (
+  asn int(10) unsigned NOT NULL,
+  isTransit tinyint(4) NOT NULL DEFAULT 0,
+  isOrigin tinyint(4) NOT NULL DEFAULT 0,
+  transit_v4_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
+  transit_v6_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
+  origin_v4_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
+  origin_v6_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
+  repeats bigint(20) unsigned NOT NULL DEFAULT 0,
+  timestamp timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  transit_v4_change decimal(8,5) NOT NULL DEFAULT 0.00000,
+  transit_v6_change decimal(8,5) NOT NULL DEFAULT 0.00000,
+  origin_v4_change decimal(8,5) NOT NULL DEFAULT 0.00000,
+  origin_v6_change decimal(8,5) NOT NULL DEFAULT 0.00000,
+  PRIMARY KEY (asn,timestamp)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+DELIMITER ;;
+CREATE TRIGGER ins_gen_asn_stats BEFORE INSERT ON gen_asn_stats
+FOR EACH ROW
+    BEGIN
+        declare last_ts timestamp;
+        declare v4_o_count bigint(20) unsigned default 0;
+        declare v6_o_count bigint(20) unsigned default 0;
+        declare v4_t_count bigint(20) unsigned default 0;
+        declare v6_t_count bigint(20) unsigned default 0;
+        SET sql_mode = '';
+        SELECT transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,
+                    origin_v6_prefixes,timestamp
+            INTO v4_t_count,v6_t_count,v4_o_count,v6_o_count,last_ts
+            FROM gen_asn_stats WHERE asn = new.asn 
+            ORDER BY timestamp DESC limit 1;
+        IF (new.transit_v4_prefixes = v4_t_count AND new.transit_v6_prefixes = v6_t_count
+                AND new.origin_v4_prefixes = v4_o_count AND new.origin_v6_prefixes = v6_o_count) THEN
+            set new.timestamp = last_ts;
+        ELSE
+    IF (v4_t_count > 0 AND new.transit_v4_prefixes > 0 AND new.transit_v4_prefixes != v4_t_count)  THEN
+      SET new.transit_v4_change = cast(if(new.transit_v4_prefixes > v4_t_count,
+                                   new.transit_v4_prefixes / v4_t_count,
+                                   v4_t_count / new.transit_v4_prefixes * -1) as decimal(8,5));
+    END IF;
+    IF (v6_t_count > 0 AND new.transit_v6_prefixes > 0 AND new.transit_v6_prefixes != v6_t_count) THEN
+      SET new.transit_v6_change = cast(if(new.transit_v6_prefixes > v6_t_count,
+                                   new.transit_v6_prefixes / v6_t_count,
+                                   v6_t_count / new.transit_v6_prefixes * -1) as decimal(8,5));
+    END IF;
+    IF (v4_o_count > 0 AND new.origin_v4_prefixes > 0 AND new.origin_v4_prefixes != v4_o_count) THEN
+      SET new.origin_v4_change = cast(if(new.origin_v4_prefixes > v4_o_count,
+                                   new.origin_v4_prefixes / v4_o_count,
+                                   v4_o_count / new.origin_v4_prefixes * -1) as decimal(8,5));
+    END IF;
+    IF (v6_o_count > 0 AND new.origin_v6_prefixes > 0 AND new.origin_v6_prefixes != v6_o_count) THEN
+      SET new.origin_v6_change = cast(if(new.origin_v6_prefixes > v6_o_count,
+                                   new.origin_v6_prefixes / v6_o_count,
+                                   v6_o_count / new.origin_v6_prefixes * -1) as decimal(8,5));
+    END IF;
+        END IF;
+    END ;;
+DELIMITER ;
+
+--
+-- Table structure for table gen_l3vpn_chg_stats_bypeer
+--
+DROP TABLE IF EXISTS gen_l3vpn_chg_stats_bypeer;
+CREATE TABLE gen_l3vpn_chg_stats_bypeer (
+  interval_time datetime(6) NOT NULL,
+  peer_hash_id char(32) NOT NULL,
+  updates int(10) unsigned NOT NULL DEFAULT 0,
+  withdraws int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (interval_time,peer_hash_id),
+  KEY idx_interval (interval_time),
+  KEY idx_peer_hash_id (peer_hash_id)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+  PARTITION BY RANGE  COLUMNS(interval_time)
+  (
+  PARTITION p2018_01 VALUES LESS THAN ('2018-02-01') ENGINE = InnoDB,
+  PARTITION p2018_02 VALUES LESS THAN ('2018-03-01') ENGINE = InnoDB,
+  PARTITION p2018_03 VALUES LESS THAN ('2018-04-01') ENGINE = InnoDB,
+  PARTITION p2018_04 VALUES LESS THAN ('2018-05-01') ENGINE = InnoDB,
+  PARTITION p2018_05 VALUES LESS THAN ('2018-06-01') ENGINE = InnoDB,
+  PARTITION p2018_06 VALUES LESS THAN ('2018-07-01') ENGINE = InnoDB,
+  PARTITION p2018_07 VALUES LESS THAN ('2018-08-01') ENGINE = InnoDB,
+  PARTITION p2018_08 VALUES LESS THAN ('2018-09-01') ENGINE = InnoDB,
+  PARTITION p2018_09 VALUES LESS THAN ('2018-10-01') ENGINE = InnoDB,
+  PARTITION p2018_10 VALUES LESS THAN ('2018-11-01') ENGINE = InnoDB,
+  PARTITION pOther VALUES LESS THAN (MAXVALUE) ENGINE = InnoDB);
+
+DROP EVENT IF EXISTS chg_l3vpn_stats_bypeer;
+DELIMITER ;;
+CREATE EVENT chg_l3vpn_stats_bypeer ON SCHEDULE EVERY 5 MINUTE STARTS '2017-10-16 15:21:23' ON COMPLETION NOT PRESERVE ENABLE DO REPLACE INTO gen_l3vpn_chg_stats_bypeer (interval_time, peer_hash_id, updates,withdraws)
+
+  SELECT c.IntervalTime,if (c.peer_hash_id is null, w.peer_hash_id, c.peer_hash_id) as peer_hash_id,
+                        if (c.updates is null, 0, c.updates) as updates,
+                        if (w.withdraws is null, 0, w.withdraws) as withdraws
+  FROM
+    (SELECT
+                     from_unixtime(unix_timestamp(c.timestamp) - unix_timestamp(c.timestamp) % 60.0) AS IntervalTime,
+       peer_hash_id, count(c.peer_hash_id) as updates
+     FROM l3vpn_log c
+     WHERE c.timestamp >= date_format(date_sub(current_timestamp, INTERVAL 10 MINUTE), "%Y-%m-%d %H:%i:00")
+           AND c.timestamp <= date_format(current_timestamp, "%Y-%m-%d %H:%i:00")
+           AND type = 'changed'
+     GROUP BY IntervalTime,c.peer_hash_id) c
+
+    LEFT JOIN
+    (SELECT
+                     from_unixtime(unix_timestamp(w.timestamp) - unix_timestamp(w.timestamp) % 60.0) AS IntervalTime,
+       peer_hash_id, count(w.peer_hash_id) as withdraws
+     FROM l3vpn_log w
+     WHERE w.timestamp >= date_format(date_sub(current_timestamp, INTERVAL 25 MINUTE), "%Y-%m-%d %H:%i:00")
+           AND w.timestamp <= date_format(current_timestamp, "%Y-%m-%d %H:%i:00")
+           AND type = 'withdrawn'
+     GROUP BY IntervalTime,w.peer_hash_id) w
+      ON (c.IntervalTime = w.IntervalTime AND c.peer_hash_id = w.peer_hash_id);;
+DELIMITER ;
+
+
+--
+-- VIEWS
+--
+drop view IF EXISTS v_geo_ip;
+create view v_geo_ip AS
+  SELECT inet6_ntoa(ip_start) as ip_start,
+         inet6_ntoa(ip_end) as ip_end,
+    addr_type, country,stateprov,city,latitude,longitude,timezone_offset,timezone_name,
+    isp_name,connection_type,organization_name,ip_start as ip_start_bin,ip_end as ip_end_bin
+  FROM geo_ip;
+
+drop view IF EXISTS v_peer_prefix_report_last_id;
+create view v_peer_prefix_report_last_id AS
+SELECT max(id) as id,peer_hash_id
+          FROM stat_reports
+          WHERE timestamp >= date_sub(current_timestamp, interval 72 hour)
+          GROUP BY peer_hash_id;
+
+drop view IF EXISTS v_peer_prefix_report_last;
+create view v_peer_prefix_report_last AS
+SELECT if (length(r.name) > 0, r.name, r.ip_address) as RouterName, if (length(p.name) > 0, p.name, p.peer_addr) as PeerName,
+                     s.timestamp as TS, prefixes_rejected as Rejected,
+                     updates_invalid_by_as_confed_loop AS ConfedLoop, updates_invalid_by_as_path_loop AS ASLoop,
+                     updates_invalid_by_cluster_list AS InvalidClusterList, updates_invalid_by_originagtor_id AS InvalidOriginator,
+                     known_dup_prefixes AS  KnownPrefix_DUP, known_dup_withdraws AS KnownWithdraw_DUP,
+                     num_routes_adj_rib_in as Pre_RIB,num_routes_local_rib as Post_RIB,
+                     r.hash_id as router_hash_id, p.hash_id as peer_hash_id
+
+          FROM v_peer_prefix_report_last_id i
+                        STRAIGHT_JOIN stat_reports s on (i.id = s.id)
+                        STRAIGHT_JOIN bgp_peers p on (s.peer_hash_id = p.hash_id)
+                        STRAIGHT_JOIN routers r on (p.router_hash_id = r.hash_id)
+          GROUP BY s.peer_hash_id;
+
+drop view IF EXISTS v_peer_prefix_report;
+create view v_peer_prefix_report AS
+SELECT if (length(r.name) > 0, r.name, r.ip_address) as RouterName, if (length(p.name) > 0, p.name, p.peer_addr) as PeerName,
+                     s.timestamp as TS, prefixes_rejected as Rejected,
+                     updates_invalid_by_as_confed_loop AS ConfedLoop, updates_invalid_by_as_path_loop AS ASLoop,
+                     updates_invalid_by_cluster_list AS InvalidClusterList, updates_invalid_by_originagtor_id AS InvalidOriginator,
+                     known_dup_prefixes AS  KnownPrefix_DUP, known_dup_withdraws AS KnownWithdraw_DUP,
+                     num_routes_adj_rib_in as Pre_RIB,num_routes_local_rib as Post_RIB,
+                     r.hash_id as router_hash_id, p.hash_id as peer_hash_id
+
+          FROM stat_reports s  JOIN  bgp_peers p on (s.peer_hash_id = p.hash_id) join routers r on (p.router_hash_id = r.hash_id)
+          order  by s.timestamp desc;
+
+
+--
+-- L3VPN views
+--
+drop view IF EXISTS v_l3vpn_routes;
+CREATE VIEW v_l3vpn_routes AS
+	select if((length(rtr.name) > 0),rtr.name,rtr.ip_address) AS RouterName,
+	if((length(p.name) > 0),p.name,p.peer_addr) AS PeerName,
+ 	r.rd AS RD,r.prefix AS Prefix,r.prefix_len AS PrefixLen,path.origin AS Origin,
+ 	r.origin_as AS Origin_AS,path.med AS MED,path.local_pref AS LocalPref,
+ 	path.next_hop AS NH,path.as_path AS AS_Path,
+	path.as_path_count AS ASPath_Count,path.community_list AS Communities,
+	path.ext_community_list AS ExtCommunities,path.large_community_list AS LargeCommunities,
+  path.cluster_list AS ClusterList,
+	path.aggregator AS Aggregator,p.peer_addr AS PeerAddress,p.peer_as AS PeerASN,
+	r.isIPv4 AS isIPv4,p.isIPv4 AS isPeerIPv4,p.isL3VPNpeer AS isPeerVPN,
+	r.timestamp AS LastModified,r.first_added_timestamp AS FirstAddedTimestamp,
+	r.prefix_bin AS prefix_bin,r.path_id AS path_id,r.labels AS labels,r.hash_id AS rib_hash_id,
+	r.path_attr_hash_id AS path_hash_id,r.peer_hash_id AS peer_hash_id,
+	rtr.hash_id AS router_hash_id,r.isWithdrawn AS isWithdrawn,
+	r.prefix_bits AS prefix_bits,r.isPrePolicy AS isPrePolicy,r.isAdjRibIn AS isAdjRibIn
+     from bgp_peers p
+               join l3vpn_rib r on (r.peer_hash_id = p.hash_id)
+	    join path_attrs path on (path.hash_id = r.path_attr_hash_id and path.peer_hash_id = r.peer_hash_id)
+              join routers rtr on (p.router_hash_id = rtr.hash_id)
+      where  r.isWithdrawn = 0;
+
+--
+-- Link State views
+--
+drop view IF EXISTS v_ls_nodes;
+CREATE VIEW v_ls_nodes AS
+SELECT r.name as RouterName,r.ip_address as RouterIP,
+       p.name as PeerName, p.peer_addr as PeerIP,igp_router_id as IGP_RouterId,
+	ls_nodes.name as NodeName,
+         if (ls_nodes.protocol like 'OSPF%', igp_router_id, router_id) as RouterId,
+         ls_nodes.id, ls_nodes.bgp_ls_id as bgpls_id, ls_nodes.ospf_area_id as OspfAreaId,
+         ls_nodes.isis_area_id as ISISAreaId, ls_nodes.protocol, flags, ls_nodes.timestamp,
+         ls_nodes.asn,path_attrs.as_path as AS_Path,path_attrs.local_pref as LocalPref,
+         path_attrs.med as MED,path_attrs.next_hop as NH,links.mt_id,
+         ls_nodes.hash_id,ls_nodes.path_attr_hash_id,ls_nodes.peer_hash_id,r.hash_id as router_hash_id
+      FROM ls_nodes LEFT JOIN path_attrs ON (ls_nodes.path_attr_hash_id = path_attrs.hash_id AND ls_nodes.peer_hash_id = path_attrs.peer_hash_id)
+	    JOIN ls_links links ON (ls_nodes.hash_id = links.local_node_hash_id and links.isWithdrawn = False)
+            JOIN bgp_peers p on (p.hash_id = ls_nodes.peer_hash_id) JOIN
+                             routers r on (p.router_hash_id = r.hash_id)
+         WHERE not ls_nodes.igp_router_id regexp "\..[1-9A-F]00$" AND ls_nodes.igp_router_id not like "%]" and ls_nodes.iswithdrawn = False
+	GROUP BY ls_nodes.peer_hash_id,ls_nodes.hash_id,links.mt_id;
+
+
+drop view IF EXISTS v_ls_links;
+CREATE VIEW v_ls_links AS
+SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
+         localn.igp_router_id as Local_IGP_RouterId,localn.router_id as Local_RouterId,
+         remoten.igp_router_id Remote_IGP_RouterId, remoten.router_id as Remote_RouterId,
+         localn.bgp_ls_id as bgpls_id,
+         IF (ln.protocol in ('OSPFv2', 'OSPFv3'),localn.ospf_area_id, localn.isis_area_id) as AreaId,
+      ln.mt_id as MT_ID,interface_addr as InterfaceIP,neighbor_addr as NeighborIP,
+      ln.isIPv4,ln.protocol,igp_metric,local_link_id,remote_link_id,admin_group,max_link_bw,max_resv_bw,
+      unreserved_bw,te_def_metric,mpls_proto_mask,srlg,ln.name,ln.timestamp,local_node_hash_id,remote_node_hash_id,
+      localn.igp_router_id as localn_igp_router_id_bin,remoten.igp_router_id as remoten_igp_router_id_bin,
+      ln.path_attr_hash_id as path_attr_hash_id, ln.peer_hash_id as peer_hash_id
+  FROM ls_links ln JOIN ls_nodes localn ON (ln.local_node_hash_id = localn.hash_id
+            AND ln.peer_hash_id = localn.peer_hash_id and localn.iswithdrawn = False)
+         JOIN ls_nodes remoten ON (ln.remote_node_hash_id = remoten.hash_id
+            AND ln.peer_hash_id = remoten.peer_hash_id and remoten.iswithdrawn = False)
+	WHERE ln.isWithdrawn = False;
+
+
+drop view IF EXISTS v_ls_links_new;
+CREATE VIEW v_ls_links_new AS
+SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
+         localn.igp_router_id as Local_IGP_RouterId,localn.router_id as Local_RouterId,
+         remoten.igp_router_id Remote_IGP_RouterId, remoten.router_id as Remote_RouterId,
+         localn.bgp_ls_id as bgpls_id,
+         IF (ln.protocol in ('OSPFv2', 'OSPFv3'),localn.ospf_area_id, localn.isis_area_id) as AreaId,
+      ln.mt_id as MT_ID,interface_addr as InterfaceIP,neighbor_addr as NeighborIP,
+      ln.isIPv4,ln.protocol,igp_metric,local_link_id,remote_link_id,admin_group,max_link_bw,max_resv_bw,
+      unreserved_bw,te_def_metric,mpls_proto_mask,srlg,ln.name,ln.timestamp,local_node_hash_id,remote_node_hash_id,
+      localn.igp_router_id as localn_igp_router_id_bin,remoten.igp_router_id as remoten_igp_router_id_bin,
+      ln.path_attr_hash_id as path_attr_hash_id, ln.peer_hash_id as peer_hash_id,
+      if(ln.iswithdrawn, 'INACTIVE', 'ACTIVE') as state
+  FROM ls_links ln JOIN ls_nodes localn ON (ln.local_node_hash_id = localn.hash_id
+            AND ln.peer_hash_id = localn.peer_hash_id and localn.iswithdrawn = False)
+         JOIN ls_nodes remoten ON (ln.remote_node_hash_id = remoten.hash_id
+            AND ln.peer_hash_id = remoten.peer_hash_id and remoten.iswithdrawn = False);
+
+
+drop view IF EXISTS v_ls_prefixes;
+CREATE VIEW v_ls_prefixes AS
+SELECT localn.name as Local_Router_Name,localn.igp_router_id as Local_IGP_RouterId,
+         localn.router_id as Local_RouterId,
+         lp.id,lp.mt_id,prefix as Prefix, prefix_len,ospf_route_type,metric,lp.protocol,
+         lp.timestamp,lp.prefix_bcast_bin,lp.prefix_bin,
+         lp.peer_hash_id
+    FROM ls_prefixes lp JOIN ls_nodes localn ON (lp.local_node_hash_id = localn.hash_id)
+    WHERE lp.isWithdrawn = False;
+
+--
+-- END
+--
