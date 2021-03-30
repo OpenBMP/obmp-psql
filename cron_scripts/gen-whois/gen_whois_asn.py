@@ -1,11 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-  Copyright (c) 2018 Cisco Systems, Inc. and others.  All rights reserved.
-  Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
-
-  This program and the accompanying materials are made available under the
-  terms of the Eclipse Public License v1.0 which accompanies this distribution,
-  and is available at http://www.eclipse.org/legal/epl-v10.html
+  Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
 
   .. moduleauthor:: Tim Evens <tim@evensweb.com>
 """
@@ -16,7 +11,6 @@ from datetime import datetime
 from collections import OrderedDict
 from time import sleep
 import subprocess
-import traceback
 import dns.resolver
 
 TBL_GEN_WHOIS_ASN_NAME = "info_asn"
@@ -94,9 +88,9 @@ def getASNList(db):
     """
     # Run query and store data
     rows = db.query(QUERY_AS_LIST)
-    print "Query for ASN List took %r seconds" % (db.last_query_time)
+    print("Query for ASN List took %r seconds" % (db.last_query_time))
 
-    print "total rows = %d" % len(rows)
+    print("total rows = %d" % len(rows))
 
     asnList = []
 
@@ -389,7 +383,7 @@ def parseCmdArgs(argv):
 
         # The last arg should be the command
         if (len(args) <= 0):
-            print "ERROR: Missing the database host/IP"
+            print("ERROR: Missing the database host/IP")
             usage(argv[0])
             sys.exit(1)
 
@@ -400,13 +394,13 @@ def parseCmdArgs(argv):
 
         # The last arg should be the command
         if (found_req_args < REQUIRED_ARGS):
-            print "ERROR: Missing required args, found %d required %d" % (found_req_args, REQUIRED_ARGS)
+            print("ERROR: Missing required args, found %d required %d" % (found_req_args, REQUIRED_ARGS))
             usage(argv[0])
             sys.exit(1)
 
         return cmd_args
 
-    except (getopt.GetoptError, TypeError), err:
+    except (getopt.GetoptError, TypeError) as err:
         print str(err)  # will print something like "option -a not recognized"
         usage(argv[0])
         sys.exit(2)
@@ -417,15 +411,15 @@ def usage(prog):
 
         :param prog:  Program name
     """
-    print ""
-    print "Usage: %s [OPTIONS] <database host/ip address>" % prog
-    print ""
-    print "  -u, --user".ljust(30) + "Database username"
-    print "  -p, --password".ljust(30) + "Database password"
-    print ""
+    print ("")
+    print ("Usage: %s [OPTIONS] <database host/ip address>" % prog)
+    print ("")
+    print ("  -u, --user".ljust(30) + "Database username")
+    print ("  -p, --password".ljust(30) + "Database password")
+    print ("")
 
-    print "OPTIONAL OPTIONS:"
-    print "  -h, --help".ljust(30) + "Print this help menu"
+    print ("OPTIONAL OPTIONS:")
+    print ("  -h, --help".ljust(30) + "Print this help menu")
 
 
 

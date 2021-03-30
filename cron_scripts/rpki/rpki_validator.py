@@ -1,10 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-  Copyright (c) 2018 Tim Evens.  All rights reserved.
-
-  This program and the accompanying materials are made available under the
-  terms of the Eclipse Public License v1.0 which accompanies this distribution,
-  and is available at http://www.eclipse.org/legal/epl-v10.html
+  Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
 
   .. moduleauthor:: Tim Evens <tim@evensweb.com>
 """
@@ -123,7 +119,7 @@ def parseCmdArgs(argv):
 
         # The last arg should be the command
         if (len(args) <= 0):
-            print "ERROR: Missing the database host/IP"
+            print ("ERROR: Missing the database host/IP")
             usage(argv[0])
             sys.exit(1)
 
@@ -134,14 +130,14 @@ def parseCmdArgs(argv):
 
         # The last arg should be the command
         if (found_req_args < REQUIRED_ARGS):
-            print "ERROR: Missing required args, found %d required %d" % (found_req_args, REQUIRED_ARGS)
+            print ("ERROR: Missing required args, found %d required %d" % (found_req_args, REQUIRED_ARGS))
             usage(argv[0])
             sys.exit(1)
 
         return cmd_args
 
     except (getopt.GetoptError, TypeError) as err:
-        print str(err)  # will print something like "option -a not recognized"
+        print (str(err))  # will print something like "option -a not recognized"
         usage(argv[0])
         sys.exit(2)
 
@@ -151,20 +147,20 @@ def usage(prog):
 
         :param prog:  Program name
     """
-    print ""
-    print "Usage: %s [OPTIONS] <database host/ip address>" % prog
-    print ""
-    print "  -u, --user".ljust(30) + "Database username"
-    print "  -p, --password".ljust(30) + "Database password"
-    print "  -s, --server".ljust(30) + "RPKI Validator server address"
-    print ""
+    print ("")
+    print ("Usage: %s [OPTIONS] <database host/ip address>" % prog)
+    print ("")
+    print ("  -u, --user".ljust(30) + "Database username")
+    print ("  -p, --password".ljust(30) + "Database password")
+    print ("  -s, --server".ljust(30) + "RPKI Validator server address")
+    print ("")
 
-    print "OPTIONAL OPTIONS:"
-    print "  -h, --help".ljust(30) + "Print this help menu"
-    print "  -d, --dbName".ljust(30) + "Database name, default is 'openbmp'"
+    print ("OPTIONAL OPTIONS:")
+    print ("  -h, --help".ljust(30) + "Print this help menu")
+    print ("  -d, --dbName".ljust(30) + "Database name, default is 'openbmp'")
 
-    print "NOTES:"
-    print "   RPKI validator http://server/export.json is used to populate the DB"
+    print ("NOTES:")
+    print ("   RPKI validator http://server/export.json is used to populate the DB")
 
 
 def main():
@@ -176,7 +172,7 @@ def main():
 
     server = cfg['server']
     load_export(db, server);
-    print "Loaded rpki roas"
+    print ("Loaded rpki roas")
 
     # Purge old entries that didn't get updated
     db.queryNoResults("DELETE FROM rpki_validator WHERE timestamp < now() - interval '1 hour'")

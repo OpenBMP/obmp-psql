@@ -1,7 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-    Copyright (c) 2018 Cisco Systems, Inc. and others.  All rights reserved.
-    Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
+  Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
 
   This program and the accompanying materials are made available under the
   terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -41,7 +40,7 @@ class dbHandler:
 
             self.cursor = self.conn.cursor()
 
-        except (py.ProgrammingError), err:
+        except (py.ProgrammingError) as err:
             print("ERROR: Connect failed: " + str(err))
             raise err
 
@@ -65,7 +64,7 @@ class dbHandler:
             :return: True if the table successfully was created, false otherwise
         """
         if (not self.cursor):
-            print "ERROR: Looks like psql is not connected, try to reconnect."
+            print("ERROR: Looks like psql is not connected, try to reconnect.")_
             return False
 
         try:
@@ -91,7 +90,7 @@ class dbHandler:
             :return: True if the table successfully was created, false otherwise
         """
         if (not self.cursor):
-            print "ERROR: Looks like psql is not connected, try to reconnect."
+            print("ERROR: Looks like psql is not connected, try to reconnect.")
             return False
 
         try:
@@ -117,7 +116,7 @@ class dbHandler:
             :return: Returns "None" if error, otherwise array list of rows
         """
         if (not self.cursor):
-            print "ERROR: Looks like psql is not connected, try to reconnect"
+            print("ERROR: Looks like psql is not connected, try to reconnect")
             return None
 
         try:
@@ -155,7 +154,7 @@ class dbHandler:
             :return: Returns True if successful, false if not.
         """
         if (not self.cursor):
-            print "ERROR: Looks like psql is not connected, try to reconnect"
+            print("ERROR: Looks like psql is not connected, try to reconnect")
             return None
 
         try:
