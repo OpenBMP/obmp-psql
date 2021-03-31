@@ -336,7 +336,7 @@ def main():
     cfg = parseCmdArgs(sys.argv)
 
     # Download the RR data files
-    #download_data_file()
+    download_data_file()
 
     db = dbHandler.dbHandler()
     db.connectDb(cfg['user'], cfg['password'], cfg['db_host'], cfg['db_name'])
