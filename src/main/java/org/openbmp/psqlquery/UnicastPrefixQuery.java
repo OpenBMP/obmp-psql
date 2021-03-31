@@ -40,13 +40,13 @@ public class UnicastPrefixQuery extends Query {
                            "origin_as,prefix,prefix_len,prefix_bits,timestamp," +
                            "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
 
-                            " VALUES ",
-//                            "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
-//                            ") t(hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
-//                                "origin_as,prefix,prefix_len,prefix_bits,timestamp,"  +
-//                                "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
-//                           " ORDER BY hash_id,timestamp desc" +
+//                            " VALUES ",
+                            "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
 
+                            ") t(hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
+                                "origin_as,prefix,prefix_len,prefix_bits,timestamp,"  +
+                                "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
+                           " ORDER BY hash_id,timestamp desc" +
                            " ON CONFLICT (peer_hash_id,hash_id) DO UPDATE SET timestamp=excluded.timestamp," +
                                "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ip_rib.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                                "origin_as=CASE excluded.isWithdrawn WHEN true THEN ip_rib.origin_as ELSE excluded.origin_as END," +

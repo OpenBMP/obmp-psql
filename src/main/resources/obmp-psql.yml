@@ -40,15 +40,15 @@ base:
 
   # Number of seconds between rebalacing of writer threads
   #    Rebalance will drain writer queues at this interval if at least one writer is above threshold
-  writer_rebalance_seconds: 600
+  writer_rebalance_seconds: 480
 
   # Maximum input queue size
   #   Normally within the range of 1000 - 20000 is enough
-  writer_queue_size: 3000
+  writer_queue_size: 2500
 
   # Maximum input queue size for the consumer
   #   A good starting size is 2 times the size of the writer queue size
-  consumer_queue_size: 60000
+  consumer_queue_size: 30000
 
   # By default AS Path indexing is enabled.  This can be very resource intensive to psql
   #    and disk.   You can disable updating the psql 'as_path_analysis' table if
@@ -65,10 +65,11 @@ postgres:
 
   # The number of statements or records to batch in a single bulk update/insert/delete
   #   NOTE: It's more efficient to have more threads with a low batch size
-  batch_records: 300
+  batch_records: 500
 
   # The time in milliseconds to wait for batching records in a bulk update/insert/delete
-  batch_time_millis: 100
+  #  Note this will state compress records in this time period.
+  batch_time_millis: 200
 
   # The number of times to retry a statement
   retries: 10

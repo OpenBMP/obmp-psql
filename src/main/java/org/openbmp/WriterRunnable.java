@@ -94,25 +94,32 @@ public class WriterRunnable implements  Runnable {
 
                         StringBuilder query = new StringBuilder();
 
-                        // Loop through queries and add them as multi-statements
+                        // Loop through queries and add as unique values to map, replacing duplicate (state compression)
                         for (Map.Entry<String, LinkedList<String>> entry : bulk_query.entrySet()) {
                             String key = entry.getKey().toString();
 
                             String[] ins = key.split("[|]");
+                            query.append(ins[0]);       // Insert statement
 
+                            boolean first = true;
                             for (String value : entry.getValue()) {
 
-                                if (query.length() > 0)
-                                    query.append(';');
+                                if (first) {
+                                    first = false;
+                                } else {
+                                    query.append(',');
+                                }
 
-                                query.append(ins[0]);
-                                query.append(' ');
                                 query.append(value);
-                                query.append(' ');
 
-                                if (ins.length > 1 && ins[1] != null && ins[1].length() > 0)
-                                    query.append(ins[1]);
                             }
+
+                            // Ending suffix statement, such as on conflict
+                            if (ins.length > 1 && ins[1] != null && ins[1].length() > 0)
+                                query.append(ins[1]);
+
+                            query.append(';');
+
                         }
 
                         if (query.length() > 0) {

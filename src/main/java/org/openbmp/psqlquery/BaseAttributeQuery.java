@@ -36,14 +36,13 @@ public class BaseAttributeQuery extends Query{
         final String [] stmt = { " INSERT INTO base_attrs (hash_id,peer_hash_id,origin,as_path,origin_as,next_hop,med,local_pref," +
                                  "isAtomicAgg,aggregator,community_list,ext_community_list,large_community_list," +
                                  "cluster_list,originator_id,as_path_count,nexthop_isIPv4,timestamp)" +
+//                                  " VALUES ",
+                                 "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
 
-                                  " VALUES ",
-//                                 "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
-//
-//                                 ") t(hash_id,peer_hash_id,origin,as_path,origin_as,next_hop,med,local_pref," +
-//                                      "isAtomicAgg,aggregator,community_list,ext_community_list,large_community_list," +
-//                                      "cluster_list,originator_id,as_path_count,nexthop_isIPv4,timestamp)" +
-//                                 " ORDER BY hash_id,timestamp desc" +
+                                 ") t(hash_id,peer_hash_id,origin,as_path,origin_as,next_hop,med,local_pref," +
+                                      "isAtomicAgg,aggregator,community_list,ext_community_list,large_community_list," +
+                                      "cluster_list,originator_id,as_path_count,nexthop_isIPv4,timestamp)" +
+                                 " ORDER BY hash_id,timestamp desc" +
                                     " ON CONFLICT (peer_hash_id,hash_id) DO UPDATE SET " +
                                             "timestamp=excluded.timestamp" };
         return stmt;
