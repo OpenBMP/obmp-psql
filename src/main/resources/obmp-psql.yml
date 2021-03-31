@@ -3,7 +3,7 @@
 base:
 
   # Interval at which the customer statistics should be printed/logged
-  stats_interval: 300
+  stats_interval: 60
 
 
   # In minutes; The maximum age between received collector heartbeats.
@@ -23,13 +23,13 @@ base:
   #  Following types are implemented.
   #   - Default
   #   - base attributes
-  writer_max_threads_per_type: 6
+  writer_max_threads_per_type: 5
 
   # Number of consecutive times the writer queue (per type) can sustain over
   #    the high threshold mark.  If queue is above threshold for a consecutive
   #    writer_allowed_over_queue_times value, a new thread will be added for
   #    the writer type, providing it isn't already at max threads (per type).
-  writer_allowed_over_queue_times: 2
+  writer_allowed_over_queue_times: 8
 
   # Number of seconds the writer needs to sustain below the low queue threshold mark
   #     in order to trigger scaling back the number of threads in use.  Only one thread
@@ -43,8 +43,8 @@ base:
   writer_rebalance_seconds: 600
 
   # Maximum input queue size
-  #   Normally within the range of 10000 - 50000 is enough
-  writer_queue_size: 30000
+  #   Normally within the range of 1000 - 20000 is enough
+  writer_queue_size: 3000
 
   # Maximum input queue size for the consumer
   #   A good starting size is 2 times the size of the writer queue size

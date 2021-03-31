@@ -1,6 +1,5 @@
 -- -----------------------------------------------------------------------
--- Copyright (c) 2018-2020 Cisco Systems, Inc. and others.  All rights reserved.
--- Copyright (c) 2018-2020 Tim Evens (tim@evensweb.com).  All rights reserved.
+-- Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
 --
 -- BEGIN Base Schema
 -- -----------------------------------------------------------------------
@@ -19,7 +18,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
 -- Use different disk for history/log/time series
-CREATE TABLESPACE timeseries LOCATION '/data/ts/postgres';
+-- CREATE TABLESPACE timeseries LOCATION '/var/lib/postgresql/ts';
 
 
 -- -----------------------------------------------------
