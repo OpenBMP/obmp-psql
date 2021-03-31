@@ -64,7 +64,7 @@ class dbHandler:
             :return: True if the table successfully was created, false otherwise
         """
         if (not self.cursor):
-            print("ERROR: Looks like psql is not connected, try to reconnect.")_
+            print("ERROR: Looks like psql is not connected, try to reconnect.")
             return False
 
         try:
