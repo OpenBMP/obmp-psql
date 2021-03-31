@@ -19,13 +19,13 @@ import dbHandler
 # RR Database download sites
 # ----------------------------------------------------------------
 RR_DB_FTP = OrderedDict()
-#RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
-#RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
-#RR_DB_FTP['radb'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'radb.db.gz'}
-#RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db'}
+RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
+RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
+RR_DB_FTP['radb'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'radb.db.gz'}
+RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db.gz'}
 RR_DB_FTP['afrinic'] = {'site': 'ftp.afrinic.net', 'path': '/pub/dbase/', 'filename': 'afrinic.db.gz'}
 RR_DB_FTP['apnic'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route.gz'}
-#RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
+RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
 RR_DB_FTP['apnic_v6'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route6.gz'}
 RR_DB_FTP['ripe'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route.gz'}
 RR_DB_FTP['ripe_v6'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route6.gz'}
@@ -36,12 +36,12 @@ RR_DB_FILES['nttcom'] = {'filename': 'nttcom.db.gz'}
 RR_DB_FILES['level3'] = {'filename': 'level3.db.gz'}
 RR_DB_FILES['radb'] = {'filename': 'radb.db.gz'}
 RR_DB_FILES['arin'] = {'filename': 'arin.db.gz'}
-#RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
-#RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
+RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
+RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
 RR_DB_FILES['jpirr'] = {'filename': 'jpirr.db.gz'}
-#RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
-#RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
-#RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
+RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
+RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
+RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
 
 # ----------------------------------------------------------------
 # Whois mapping
@@ -88,6 +88,7 @@ def import_rr_db_file(db, source, db_filename):
         prev_attr = ""
 
         for line in inf:
+            line = line.decode("utf-8", "ignore")
             line = line.rstrip('\n')
             line = line.replace("\t", " ")
 
@@ -182,7 +183,7 @@ def add_route_to_db(db, record, commit=False):
         bulk_insert_queue.append("('%s/%d'::inet,%d,%u,'%s', '%s')" % (record['prefix'], record['prefix_len'],
                                                                        record['prefix_len'],
                                                                        record['origin_as'],
-                                                                       unicode(record['descr'], errors="ignore")[:254],
+                                                                       record['descr'][:254],
                                                                        record['source']))
 
     # Insert/commit the queue if commit is True or if reached max queue size
