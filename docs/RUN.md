@@ -1,14 +1,5 @@
 # Running OpenBMP Postgres App
 
-> Consult the OpenBMP docker postgres [INSTALL](https://github.com/OpenBMP/docker/blob/master/postgres/scripts/install) and
-[RUN](https://github.com/OpenBMP/docker/blob/master/postgres/scripts/run) scripts for
-end-to-end install and run automation details. 
-
-See [OBMP Postgres](POSTGRES.md) documentation for details on setting up Postgres.
-
-Consumer
---------
-
 #### Edit the configuration
 
 You will first need to extract the configuration file and then modify it per your install/needs.  The default
@@ -54,7 +45,7 @@ the ```-Dlog4j.configurationFile=<filename>``` option to java when running the J
 
 #### Example log4j2.yml 
 Below is the default ```log4j2.yml```.  Use this as a starting config. 
- 
+
 ```yaml
 Configuration:
   status: warn
