@@ -97,7 +97,7 @@ def getASNList(db):
     # Append only if the ASN is not a private/reserved ASN
     for row in rows:
         try:
-            asn_int = long(row[0])
+            asn_int = int(row[0])
 
             if (asn_int == 0 or asn_int == 23456 or
                     (asn_int >= 64496 and asn_int <= 65535) or
@@ -210,7 +210,7 @@ def whois(asn, host):
     proc = subprocess.Popen(WHOIS_CMD,
                             stdout= subprocess.PIPE, stdin=None)
 
-    output = proc.stdout.read()
+    output = (proc.stdout.read()).decode("utf-8", "ignore")
     proc.communicate()
 
     return parse_whois(output)
@@ -295,7 +295,7 @@ def walkWhois(db, asnList):
 
         # delay between queries
         if (requests >= MAX_REQUESTS_PER_INTERVAL):
-            print "%s: Processed %d of %d" % (datetime.utcnow(), asnList_processed, asnList_size)
+            print("%s: Processed %d of %d" % (datetime.utcnow(), asnList_processed, asnList_size))
             sleep(5)
             requests = 0
 
@@ -317,7 +317,7 @@ def UpdateWhoisDb(db, asn, record):
     values = ''
     for idx,name in enumerate(record,start=1):
         columns += name
-        values += '\'' + unicode(record[name][:254], errors='ignore') + '\''
+        values += '\'' + str(record[name])[:254] + '\''
 
         if (idx != total_columns):
             columns += ','
@@ -401,7 +401,7 @@ def parseCmdArgs(argv):
         return cmd_args
 
     except (getopt.GetoptError, TypeError) as err:
-        print str(err)  # will print something like "option -a not recognized"
+        print(str(err))  # will print something like "option -a not recognized"
         usage(argv[0])
         sys.exit(2)
 
