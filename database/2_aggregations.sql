@@ -94,13 +94,13 @@ BEGIN
   -- byprefix updates
   INSERT INTO stats_chg_byprefix (interval_time, peer_hash_id, prefix, prefix_len, withdraws,updates)
 	SELECT
-	       to_timestamp((extract(epoch from timestamp)::bigint / 900)::bigint * 900) at time zone 'utc' as IntervalTime,
+	       to_timestamp((extract(epoch from timestamp)::bigint / 120)::bigint * 120) at time zone 'utc' as IntervalTime,
 	       peer_hash_id,prefix,prefix_len,
 	       count(case WHEN ip_rib_log.iswithdrawn = true THEN 1 ELSE null END) as withdraws,
 	       count(case WHEN ip_rib_log.iswithdrawn = false THEN 1 ELSE null END) as updates
 	     FROM ip_rib_log
-	     WHERE timestamp >= to_timestamp((extract(epoch from now())::bigint / 900)::bigint * 900) at time zone 'utc' - int_window
-	           AND timestamp < to_timestamp((extract(epoch from now())::bigint / 900)::bigint * 900) at time zone 'utc'   -- current minute
+	     WHERE timestamp >= to_timestamp((extract(epoch from now())::bigint / 120)::bigint * 120) at time zone 'utc' - int_window
+	           AND timestamp < to_timestamp((extract(epoch from now())::bigint / 120)::bigint * 120) at time zone 'utc'   -- current minute
 	     GROUP BY IntervalTime,peer_hash_id,prefix,prefix_len
 	ON CONFLICT (interval_time,peer_hash_id,prefix) DO UPDATE
 		SET updates=excluded.updates, withdraws=excluded.withdraws;
