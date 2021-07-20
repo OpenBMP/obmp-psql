@@ -8,7 +8,10 @@
 import sys
 import getopt
 import dbHandler
-import urllib2, json
+import json
+import urllib3
+import requests
+
 import ipaddr
 from time import time
 
@@ -20,7 +23,8 @@ from time import time
 # ----------------------------------------------------------------
 # Functions
 # ----------------------------------------------------------------
-def load_export(db, server, api="api/export.json"):
+def load_export(db, server, rpkiuser, rpkipassword):
+    urllib3.disable_warnings()
     query_begin = 'INSERT INTO rpki_validator (prefix, prefix_len, prefix_len_max, origin_as) VALUES '
     query_end = ' ON CONFLICT (prefix,prefix_len_max,origin_as) DO UPDATE SET timestamp=now()'
 
@@ -28,14 +32,19 @@ def load_export(db, server, api="api/export.json"):
     data = []
 
     try:
-        req = urllib2.Request(url='http://' + server + '/' + api,
-                              headers={ 'Accept': 'application/json'})
-        json_response = json.load(urllib2.urlopen(req))
+        if (rpkipassword == 'None') or (rpkipassword == None):
+            req = requests.get(server, verify=False ).content.decode('utf-8')
+        else:
+            req = requests.get(server, verify=False, auth=(rpkiuser,rpkipassword)).content.decode('utf-8')
+
+
+        #print(req.content)
+        json_response = json.loads(req)
         data = json_response['roas'] # json
 
-    except urllib2.URLError as err:
-       print ("Error connecting to rpki server: %r") % err
-       return
+    except requests.exceptions.RequestException as e:
+        print ("Error connecting to rpki server: %r") % err
+        return 
 
     query = query_begin
     count = 0
@@ -45,6 +54,9 @@ def load_export(db, server, api="api/export.json"):
             query += ','
 
         asn, prefix_full, max_length = line['asn'], line['prefix'], line['maxLength']
+        # remove the characters "AS", some RPKI vendors include this in their data
+        asn = asn.replace('AS','')
+
         prefix, prefix_len = prefix_full.split('/')[0], prefix_full.split('/')[1]
 
         query += "('%s'::inet, %d, %d, %d)" % (prefix_full, int(prefix_len), int(max_length), int(asn))
@@ -82,6 +94,8 @@ def parseCmdArgs(argv):
                  'db_host': None,
                  'db_name': "openbmp",
                  'server': None,
+                 'rpkiuser': None,
+                 'rpkipassword': None,
                  'api': None }
 
     if (len(argv) < 5):
@@ -89,8 +103,8 @@ def parseCmdArgs(argv):
         sys.exit(1)
 
     try:
-        (opts, args) = getopt.getopt(argv[1:], "hu:p:d:s:a:",
-                                       ["help", "user=", "password=", "dbName=", "server=", 'api='])
+        (opts, args) = getopt.getopt(argv[1:], "hu:p:d:s:a:y:z",
+                                       ["help", "user=", "password=", "dbName=", "server=", 'api=', "rpkiuser=", "rpkipassword="])
 
         for o, a in opts:
             if o in ("-h", "--help"):
@@ -112,6 +126,15 @@ def parseCmdArgs(argv):
             elif o in ("-s", "--server"):
                 found_req_args += 1
                 cmd_args['server'] = a
+
+            elif o in ("-y", "--rpkiuser"):
+                found_req_args += 1
+                cmd_args['rpkiuser'] = a
+
+            elif o in ("-z", "--rpkipassword"):
+                found_req_args += 1
+                cmd_args['rpkipassword'] = a
+
 
             else:
                 usage(argv[0])
@@ -158,6 +181,8 @@ def usage(prog):
     print ("OPTIONAL OPTIONS:")
     print ("  -h, --help".ljust(30) + "Print this help menu")
     print ("  -d, --dbName".ljust(30) + "Database name, default is 'openbmp'")
+    print ("  -y, --rpkiuser".ljust(30) + "RPKI server username if needed" )
+    print ("  -z, --rpkipassword".ljust(30) + "RPKI server password if needed" )
 
     print ("NOTES:")
     print ("   RPKI validator http://server/export.json is used to populate the DB")
@@ -171,7 +196,9 @@ def main():
     print('connected to db')
 
     server = cfg['server']
-    load_export(db, server);
+    rpkiuser = cfg['rpkiuser']
+    rpkipassword = cfg['rpkipassword']
+    load_export(db, server, rpkiuser, rpkipassword);
     print ("Loaded rpki roas")
 
     # Purge old entries that didn't get updated
