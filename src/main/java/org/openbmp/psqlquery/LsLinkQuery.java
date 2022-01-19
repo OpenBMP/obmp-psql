@@ -39,7 +39,7 @@ public class LsLinkQuery extends Query {
                     "igp_metric,srlg,name,local_igp_router_id,local_router_id,remote_igp_router_id,remote_router_id,local_asn," +
                     "remote_asn,peer_node_sid,sr_adjacency_sids,iswithdrawn,timestamp)" +
 
-                " SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
+                " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
 
                 ") t(hash_id,peer_hash_id,base_attr_hash_id,seq," +
                         "mt_id,interface_addr," +
@@ -47,8 +47,8 @@ public class LsLinkQuery extends Query {
                         "admin_group,max_link_bw,max_resv_bw,unreserved_bw,te_def_metric,protection_type,mpls_proto_mask," +
                         "igp_metric,srlg,name,local_igp_router_id,local_router_id,remote_igp_router_id,remote_router_id,local_asn," +
                         "remote_asn,peer_node_sid,sr_adjacency_sids,iswithdrawn,timestamp)" +
-                    " ORDER BY hash_id,timestamp desc " +
-                        "ON CONFLICT (hash_id) DO UPDATE SET timestamp=excluded.timestamp,isWithdrawn=excluded.isWithdrawn,seq=excluded.seq," +
+                    " ORDER BY hash_id,peer_hash_id,timestamp desc " +
+                        "ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,isWithdrawn=excluded.isWithdrawn,seq=excluded.seq," +
                             "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ls_links.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                             "interface_addr=CASE excluded.isWithdrawn WHEN true THEN ls_links.interface_addr ELSE excluded.interface_addr END," +
                             "neighbor_addr=CASE excluded.isWithdrawn WHEN true THEN ls_links.neighbor_addr ELSE excluded.neighbor_addr END," +

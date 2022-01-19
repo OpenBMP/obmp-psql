@@ -117,27 +117,6 @@ CREATE TABLE l3vpn_log (
   PARTITION p2018_10 VALUES LESS THAN ('2018-11-01') ENGINE = InnoDB,
   PARTITION pOther VALUES LESS THAN (MAXVALUE) ENGINE = InnoDB);
 
---
--- Table structure for table gen_asn_stats
---
-DROP TABLE IF EXISTS gen_asn_stats;
-CREATE TABLE gen_asn_stats (
-  asn int(10) unsigned NOT NULL,
-  isTransit tinyint(4) NOT NULL DEFAULT 0,
-  isOrigin tinyint(4) NOT NULL DEFAULT 0,
-  transit_v4_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
-  transit_v6_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
-  origin_v4_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
-  origin_v6_prefixes bigint(20) unsigned NOT NULL DEFAULT 0,
-  repeats bigint(20) unsigned NOT NULL DEFAULT 0,
-  timestamp timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  transit_v4_change decimal(8,5) NOT NULL DEFAULT 0.00000,
-  transit_v6_change decimal(8,5) NOT NULL DEFAULT 0.00000,
-  origin_v4_change decimal(8,5) NOT NULL DEFAULT 0.00000,
-  origin_v6_change decimal(8,5) NOT NULL DEFAULT 0.00000,
-  PRIMARY KEY (asn,timestamp)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
 DELIMITER ;;
 CREATE TRIGGER ins_gen_asn_stats BEFORE INSERT ON gen_asn_stats
 FOR EACH ROW

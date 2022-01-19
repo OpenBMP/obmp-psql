@@ -490,13 +490,6 @@ public class ConsumerRunnable implements Runnable {
                         BaseAttribute ba = new org.openbmp.api.parsed.processor.BaseAttribute(message.getContent());
                         dbQuery = new BaseAttributeQuery(ba.records);
 
-                        if (!cfg.getDisable_as_path_indexing()) {
-                            addBulkQuerytoWriter(record.key(),
-                                    ((BaseAttributeQuery) dbQuery).genAsPathAnalysisStatement(),
-                                    ((BaseAttributeQuery) dbQuery).genAsPathAnalysisValuesStatement(),
-                                    ThreadType.THREAD_ATTRIBUTES);
-                        }
-
                     } else if ((message.getType() != null && message.getType().equalsIgnoreCase("unicast_prefix"))
                             || record.topic().equals("openbmp.parsed.unicast_prefix")) {
                         logger.trace("Parsing unicast_prefix message");
@@ -861,8 +854,7 @@ public class ConsumerRunnable implements Runnable {
             switch (msg.thread_type) {
 
 // - works well but causes deadlocks and a lot of waiting on shared locks
-//                case THREAD_ATTRIBUTES:
-//                case THRAED_AS_PATH_ANALYSIS: {
+//                case THREAD_ATTRIBUTES: {
 //                    /*
 //                     * Order is not needed, choose the least congested thread
 //                     */

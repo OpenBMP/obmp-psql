@@ -123,21 +123,6 @@ SELECT r.name as RouterName,r.ip_address as RouterIP,
 
 drop view IF EXISTS v_ls_links;
 CREATE VIEW v_ls_links AS
--- SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
---         localn.igp_router_id as Local_IGP_RouterId,localn.router_id as Local_RouterId,
---         remoten.igp_router_id Remote_IGP_RouterId, remoten.router_id as Remote_RouterId,
---         localn.seq, localn.bgp_ls_id as bgpls_id,
---         CASE WHEN ln.protocol in ('OSPFv2', 'OSPFv3') THEN localn.ospf_area_id ELSE localn.isis_area_id END as AreaId,
---         ln.mt_id as MT_ID,interface_addr as InterfaceIP,neighbor_addr as NeighborIP,
---         ln.isIPv4,ln.protocol,igp_metric,local_link_id,remote_link_id,admin_group,max_link_bw,max_resv_bw,
---         unreserved_bw,te_def_metric,mpls_proto_mask,srlg,ln.name,ln.timestamp,local_node_hash_id,remote_node_hash_id,
---         localn.igp_router_id as localn_igp_router_id,remoten.igp_router_id as remoten_igp_router_id,
---         ln.base_attr_hash_id as base_attr_hash_id, ln.peer_hash_id as peer_hash_id,
--- 		CASE WHEN ln.iswithdrawn THEN 'WITHDRAWN' ELSE 'ACTIVE' END as state
--- 	FROM ls_links ln JOIN ls_nodes localn ON (ln.local_node_hash_id = localn.hash_id
--- 			AND ln.peer_hash_id = localn.peer_hash_id and localn.iswithdrawn = False)
--- 		JOIN ls_nodes remoten ON (ln.remote_node_hash_id = remoten.hash_id
--- 			AND ln.peer_hash_id = remoten.peer_hash_id and remoten.iswithdrawn = False);
 SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
         localn.igp_router_id as Local_IGP_RouterId,localn.router_id as Local_RouterId,
         remoten.igp_router_id Remote_IGP_RouterId, remoten.router_id as Remote_RouterId,
@@ -149,7 +134,8 @@ SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
         localn.igp_router_id as localn_igp_router_id,remoten.igp_router_id as remoten_igp_router_id,
         ln.base_attr_hash_id as base_attr_hash_id, ln.peer_hash_id as peer_hash_id,
 		CASE WHEN ln.iswithdrawn THEN 'WITHDRAWN' ELSE 'ACTIVE' END as state
-	FROM ls_links ln JOIN ls_nodes localn ON (ln.local_node_hash_id = localn.hash_id
+	FROM ls_links ln
+	    JOIN ls_nodes localn ON (ln.local_node_hash_id = localn.hash_id
 			AND ln.peer_hash_id = localn.peer_hash_id)
 		JOIN ls_nodes remoten ON (ln.remote_node_hash_id = remoten.hash_id
 			AND ln.peer_hash_id = remoten.peer_hash_id);
@@ -162,7 +148,8 @@ SELECT localn.name as Local_Router_Name,localn.igp_router_id as Local_IGP_Router
          lp.seq,lp.mt_id,prefix as Prefix, prefix_len,ospf_route_type,metric,lp.protocol,
          lp.timestamp,lp.peer_hash_id,lp.local_node_hash_id,
          CASE WHEN lp.iswithdrawn THEN 'WITHDRAWN' ELSE 'ACTIVE' END as state
-    FROM ls_prefixes lp JOIN ls_nodes localn ON (lp.local_node_hash_id = localn.hash_id);
+    FROM ls_prefixes lp JOIN ls_nodes localn ON (localn.peer_hash_id = lp.peer_hash_id
+                                                 AND lp.local_node_hash_id = localn.hash_id);
 
 --
 -- END

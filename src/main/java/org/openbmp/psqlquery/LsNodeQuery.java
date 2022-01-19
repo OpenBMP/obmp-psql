@@ -34,14 +34,14 @@ public class LsNodeQuery extends Query {
                 "flags,name,mt_ids,sr_capabilities," +
                 "isWithdrawn,timestamp) " +
 
-                "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
+                "SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
 
                 ") t(hash_id,peer_hash_id,base_attr_hash_id,seq," +
                         "asn,bgp_ls_id,igp_router_id,ospf_area_id,protocol,router_id,isis_area_id" +
                         "flags,name,mt_ids,sr_capabilities," +
                         "isWithdrawn,timestamp) " +
-                    " ORDER BY hash_id,timestamp desc" +
-                        " ON CONFLICT (hash_id) DO UPDATE SET timestamp=excluded.timestamp,seq=excluded.seq," +
+                    " ORDER BY hash_id,peer_hash_id,timestamp desc" +
+                        " ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,seq=excluded.seq," +
                         "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ls_nodes.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                         "isWithdrawn=excluded.isWithdrawn," +
                         "sr_capabilities=CASE excluded.isWithdrawn WHEN true THEN ls_nodes.sr_capabilities ELSE excluded.sr_capabilities END"

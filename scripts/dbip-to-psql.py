@@ -11,18 +11,18 @@
 
  After import, sync geo_ip with the RIB
 
+BEGIN WORK;
+LOCK TABLE geo_ip IN SHARE ROW EXCLUSIVE MODE;
  INSERT INTO geo_ip (family, ip, country, stateprov,city,latitude,longitude,
 				    timezone_offset, timezone_name, isp_name)
-	select 4,prefix,country,stateprov,city,latitude,longitude,0,'UTC','RIB_SYNC'
-		FROM (
-			select distinct prefix
-				from ip_rib
-				where peer_hash_id = 'd46b7950-5eb0-a864-be53-16e4247c68f0'
-					and prefix != '0.0.0.0/0'
-		) r
-		JOIN geo_ip g ON (ip >>= host(prefix)::inet and ip != '0.0.0.0/0')
-	ON CONFLICT (ip) DO NOTHING;
-
+	select DISTINCT ON (prefix) 4,prefix,country,stateprov,city,latitude,longitude,0,'UTC','RIB_SYNC'
+	    FROM global_ip_rib r
+		JOIN geo_ip g ON (ip >>= host(prefix)::inet and ip != '0.0.0.0/0' and ip != prefix)
+		WHERE prefix != '0.0.0.0/0'
+    ON CONFLICT (ip) DO UPDATE SET
+       city=excluded.city, stateprov=excluded.stateprov,
+       country=excluded.country, latitude=excluded.latitude, longitude=excluded.longitude;
+COMMIT WORK;
 """
 import logging
 import click
@@ -227,32 +227,69 @@ def main(pghost, pguser, pgpassword, pgdatabase, in_file):
     db = dbHandler()
     db.connectDb(pguser, pgpassword, pghost, pgdatabase)
 
+    sql_insert = ("INSERT INTO geo_ip (family,ip,city,stateprov,country,latitude,longitude,"
+                  "timezone_offset, timezone_name, isp_name) VALUES ")
+
+    sql_conflict = (" ON CONFLICT (ip) DO UPDATE SET "
+                    " city=excluded.city, stateprov=excluded.stateprov,"
+                    " country=excluded.country, latitude=excluded.latitude, longitude=excluded.longitude;")
+
+    total_count = 0
+    count=0
+    line_count=1
+    sql_values=""
+
     with open(in_file, "r") as inf:
         line=inf.readline()
-        while line:
+        while line and len(line) > 0:
             #r=line.rstrip('\n').replace("'", "").split(',')
             stripped_line=line.rstrip('\n').replace("'", "")
             r = [ '{}'.format(x) for x in list(csv.reader([stripped_line], delimiter=',', quotechar='"'))[0] ]
             ip_list=netaddr.iprange_to_cidrs(r[0], r[1])
             addr_type = 4 if '.' in r[0] else 6
+
+
+            # DB-IP specifies ranges like 1.1.1.18 - 1.1.1.50.  ip_list will be the specific CIDRs that includes
+            #   all the IPs in the range.  This is why a single entry will end up being multiple CIDRs.
             for ip in ip_list:
-                sql = "INSERT INTO geo_ip (family,ip,city,stateprov,country,latitude,longitude,"
-                sql += "timezone_offset, timezone_name, isp_name) "
-                sql += "values (%d, '%s', '%s', '%s', '%s', %s, %s," % (addr_type,
+                if count:
+                    sql_values += ','
+
+                sql_values += "(%d, '%s', '%s', '%s', '%s', %s, %s," % (addr_type,
                                                                         ip,
                                                                         r[5].encode('ascii', 'ignore').decode('ascii'),
                                                                         r[4].encode('ascii', 'ignore').decode('ascii'),
                                                                         r[3],
                                                                         r[6], r[7]);
-                sql += "0, 'UTC', '') "
-                sql += "ON CONFLICT (ip) DO UPDATE SET "
-                sql += "city=excluded.city, stateprov=excluded.stateprov,"
-                sql += "country=excluded.country, latitude=excluded.latitude, longitude=excluded.longitude;"
-
-                #LOG.info(sql)
-                db.queryNoResults(sql)
+                sql_values += "0, 'UTC', '') "
+                count += 1
 
             line=inf.readline()
+            line_count += 1
+
+            # bulk insert
+            if count >= 5000:
+                total_count += count
+                LOG.info(f"Inserting {count} records, total {total_count}, line count {line_count}")
+
+                try:
+                    db.queryNoResults(sql_insert + sql_values + sql_conflict)
+                except:
+                    LOG.error("Trying to insert again due to exception")
+                    db.queryNoResults(sql_insert + sql_values + sql_conflict)
+
+                sql_values = ""
+                count = 0
+
+        # insert the last batch
+        if len(sql_values) > 0:
+            total_count += count
+            try:
+                LOG.info(f"Inserting last batch, count {count}, total {total_count}, line count {line_count}")
+                db.queryNoResults(sql_insert + sql_values + sql_conflict)
+            except:
+                LOG.error("Trying to insert again due to exception")
+                db.queryNoResults(sql_insert + sql_values + sql_conflict)
 
     db.close()
 

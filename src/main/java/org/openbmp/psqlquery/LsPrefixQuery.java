@@ -37,19 +37,20 @@ public class LsPrefixQuery extends Query {
                                 "igp_flags,isIPv4,route_tag,ext_route_tag,metric,ospf_fwd_addr,sr_prefix_sids," +
                                 "isWithdrawn,timestamp)" +
 
-                    " SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
+                    " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
 
                     ") t(hash_id,peer_hash_id,base_attr_hash_id,seq,local_node_hash_id," +
                          "mt_id,protocol,prefix,prefix_len,ospf_route_type," +
                          "igp_flags,isIPv4,route_tag,ext_route_tag,metric,ospf_fwd_addr,sr_prefix_sids" +
                          "isWithdrawn,timestamp)" +
-                    " ORDER BY hash_id,timestamp desc" +
-                        " ON CONFLICT (hash_id) DO UPDATE SET timestamp=excluded.timestamp,seq=excluded.seq," +
+                    " ORDER BY hash_id,peer_hash_id,timestamp desc" +
+                        " ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,seq=excluded.seq," +
                             "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                             "igp_flags=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.igp_flags ELSE excluded.igp_flags END," +
                             "route_tag=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.route_tag ELSE excluded.route_tag END," +
                             "ext_route_tag=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.ext_route_tag ELSE excluded.ext_route_tag END," +
-                            "metric=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.metric ELSE excluded.metric END," +
+                            "metric=CA" +
+                            "SE excluded.isWithdrawn WHEN true THEN ls_prefixes.metric ELSE excluded.metric END," +
                             "sr_prefix_sids=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.sr_prefix_sids ELSE excluded.sr_prefix_sids END," +
 
                             "isWithdrawn=excluded.isWithdrawn"

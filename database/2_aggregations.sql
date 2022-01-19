@@ -20,6 +20,14 @@ CREATE INDEX ON stats_chg_bypeer (peer_hash_id);
 -- convert to timescaledb
 SELECT create_hypertable('stats_chg_bypeer', 'interval_time', chunk_time_interval => interval '6 hours');
 
+ALTER TABLE stats_chg_bypeer SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id'
+	);
+
+SELECT add_retention_policy('stats_chg_bypeer', INTERVAL '4 weeks');
+SELECT add_compression_policy('stats_chg_bypeer', INTERVAL '2 days');
+
 -- advertisement and withdrawal changes by asn
 DROP TABLE IF EXISTS stats_chg_byasn;
 CREATE TABLE stats_chg_byasn (
@@ -36,6 +44,14 @@ CREATE INDEX ON stats_chg_byasn (origin_as);
 
 -- convert to timescaledb
 SELECT create_hypertable('stats_chg_byasn', 'interval_time', chunk_time_interval => interval '6 hours');
+
+ALTER TABLE stats_chg_byasn SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id,origin_as'
+	);
+
+SELECT add_compression_policy('stats_chg_byasn', INTERVAL '2 days');
+SELECT add_retention_policy('stats_chg_byasn', INTERVAL '4 weeks');
 
 -- advertisement and withdrawal changes by prefix
 DROP TABLE IF EXISTS stats_chg_byprefix;
@@ -55,6 +71,14 @@ CREATE INDEX ON stats_chg_byprefix (prefix);
 
 -- convert to timescaledb
 SELECT create_hypertable('stats_chg_byprefix', 'interval_time', chunk_time_interval => interval '6 hours');
+
+ALTER TABLE stats_chg_byprefix SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id,prefix'
+	);
+
+SELECT add_compression_policy('stats_chg_byprefix', INTERVAL '2 days');
+SELECT add_retention_policy('stats_chg_byprefix', INTERVAL '4 weeks');
 
 --
 -- Function to update the change stats tables (bypeer, byasn, and byprefix).
@@ -128,73 +152,116 @@ CREATE UNIQUE INDEX ON stats_ip_origins (interval_time,asn);
 -- convert to timescaledb
 SELECT create_hypertable('stats_ip_origins', 'interval_time', chunk_time_interval => interval '1 month');
 
+ALTER TABLE stats_ip_origins SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'asn'
+	);
+
+SELECT add_compression_policy('stats_ip_origins', INTERVAL '2 days');
+SELECT add_retention_policy('stats_ip_origins', INTERVAL '4 weeks');
+
 --
 -- Function to update the global IP rib and the prefix counts by origin stats. This includes RPKI and IRR counts
+--      int_time                Interval/window time to check for changed RIB entries.
 --
-CREATE OR REPLACE FUNCTION update_global_ip_rib()
+CREATE OR REPLACE FUNCTION update_global_ip_rib(
+	int_time interval DEFAULT '15 minutes'
+)
 	RETURNS void AS $$
 BEGIN
 
-	-- mark existing records to be deleted
-	UPDATE global_ip_rib SET should_delete = true;
+	-- Load changed prefixes only - First time will load every prefix. Expect in that case it'll take a little while.
+	INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,
+	                           iswithdrawn,timestamp,first_added_timestamp,num_peers)
+	SELECT r.prefix,r.prefix_len,r.origin_as,
+	       bool_and(r.iswithdrawn) as isWithdrawn,
+	       max(r.timestamp),min(r.first_added_timestamp),count(r.peer_hash_id)
 
-    -- Load the global rib with the current state rib
-    INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,timestamp,num_peers)
-        SELECT prefix,prefix_len,origin_as,max(timestamp),count(peer_hash_id)
-          FROM ip_rib
-          WHERE origin_as != 0 AND origin_as != 23456 AND iswithdrawn = false
-          GROUP BY prefix,prefix_len,origin_as
-      ON CONFLICT (prefix,recv_origin_as)
-        DO UPDATE SET should_delete=false, num_peers=excluded.num_peers;
+	FROM (
+		     SELECT prefix FROM ip_rib
+		     WHERE timestamp >= now() - int_time
+			   AND origin_as != 23456
+		     GROUP BY prefix
+	     ) c
+		     JOIN ip_rib r
+		          ON (r.prefix = c.prefix)
+	GROUP BY r.prefix,r.prefix_len,r.origin_as
+	ON CONFLICT (prefix,recv_origin_as)
+		DO UPDATE SET timestamp=excluded.timestamp,
+		              first_added_timestamp=excluded.timestamp,
+		              iswithdrawn=excluded.iswithdrawn,
+		              num_peers=excluded.num_peers;
 
-    -- purge older records marked for deletion and if they are older than 2 hours
-    DELETE FROM global_ip_rib where should_delete = true and timestamp < now () - interval '2 hours';
+	-- delete old withdrawn prefixes that we don't want to track anymore
+	DELETE FROM global_ip_rib where iswithdrawn = true and timestamp < now () - interval '8 hours';
 
-    -- Update IRR
-    UPDATE global_ip_rib r SET irr_origin_as=i.origin_as,irr_source=i.source
-        FROM info_route i
-        WHERE  r.timestamp >= now() - interval '2 hour' and i.prefix = r.prefix;
+	-- Update IRR
+	UPDATE global_ip_rib r SET
+		                        irr_origin_as=i.origin_as,
+		                       irr_source=i.source,
+		                       irr_descr=i.descr
+	FROM info_route i
+	WHERE  r.timestamp >= now() - (int_time * 3) and i.prefix = r.prefix;
 
-    -- Update RPKI entries - Limit query to only update what has changed in the last 2 hours
-    --    NOTE: The global_ip_rib table should have current times when first run (new table).
-    --          This will result in this query taking a while. After first run, it shouldn't take
-    --          as long.
-     UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
-         FROM rpki_validator p
- 		WHERE r.timestamp >= now() - interval '2 hour' AND p.prefix >>= r.prefix AND r.prefix_len >= p.prefix_len
- 		    AND r.prefix_len <= p.prefix_len_max;
-
-	-- Update again with exact match if possible
+	-- Update RPKI entries - Limit query to only update what has changed in the last 1 hour
+	--    NOTE: The global_ip_rib table should have current times when first run (new table).
+	--          This will result in this query taking a while. After first run, it shouldn't take
+	--          as long.
 	UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
 	FROM rpki_validator p
-	WHERE r.timestamp >= now() - interval '2 hour'
-	  AND p.prefix >>= r.prefix AND r.prefix_len >= p.prefix_len
-	  AND r.prefix_len <= p.prefix_len_max
-	  AND r.recv_origin_as = p.origin_as;
+	WHERE r.timestamp >= now() - (int_time * 3)
+	  AND p.prefix >>= r.prefix
+	  AND r.prefix_len >= p.prefix_len
+	  AND r.prefix_len <= p.prefix_len_max;
 
-     -- Origin stats (originated v4/v6 with IRR and RPKI counts)
-     INSERT INTO stats_ip_origins (interval_time,asn,v4_prefixes,v6_prefixes,
-               v4_with_rpki,v6_with_rpki,v4_with_irr,v6_with_irr)
-       SELECT to_timestamp((extract(epoch from now())::bigint / 3600)::bigint * 3600),
-             recv_origin_as,
-             sum(case when family(prefix) = 4 THEN 1 ELSE 0 END) as v4_prefixes,
-             sum(case when family(prefix) = 6 THEN 1 ELSE 0 END) as v6_prefixes,
-             sum(case when rpki_origin_as > 0 and family(prefix) = 4 THEN 1 ELSE 0 END) as v4_with_rpki,
-             sum(case when rpki_origin_as > 0 and family(prefix) = 6 THEN 1 ELSE 0 END) as v6_with_rpki,
-             sum(case when irr_origin_as > 0 and family(prefix) = 4 THEN 1 ELSE 0 END) as v4_with_irr,
-             sum(case when irr_origin_as > 0 and family(prefix) = 6 THEN 1 ELSE 0 END) as v6_with_irr
-         FROM global_ip_rib
-         GROUP BY recv_origin_as
-       ON CONFLICT (interval_time,asn) DO UPDATE SET v4_prefixes=excluded.v4_prefixes,
-             v6_prefixes=excluded.v6_prefixes,
-             v4_with_rpki=excluded.v4_with_rpki,
-             v6_with_rpki=excluded.v6_with_rpki,
-             v4_with_irr=excluded.v4_with_irr,
-             v6_with_irr=excluded.v6_with_irr;
+	-- Update again with exact match if possible
+-- 	UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
+-- 	FROM rpki_validator p
+-- 	WHERE r.timestamp >= now() - (int_time * 3)
+-- 	  AND p.prefix >>= r.prefix
+-- 	  AND r.prefix_len >= p.prefix_len
+-- 	  AND r.prefix_len <= p.prefix_len_max
+-- 	  AND r.recv_origin_as = p.origin_as;
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+--
+-- Function to update the origin stats.
+--      int_time                Interval/window time to check for changed RIB entries.
+--
+CREATE OR REPLACE FUNCTION update_origin_stats(
+	int_time interval DEFAULT '30 minutes'
+)
+	RETURNS void AS $$
+BEGIN
+
+    -- Origin stats (originated v4/v6 with IRR and RPKI counts)
+	INSERT INTO stats_ip_origins (interval_time,asn,v4_prefixes,v6_prefixes,
+	                              v4_with_rpki,v6_with_rpki,v4_with_irr,v6_with_irr)
+	SELECT to_timestamp((extract(epoch from now())::bigint / 3600)::bigint * 3600),
+	       recv_origin_as,
+	       sum(case when family(prefix) = 4 THEN 1 ELSE 0 END) as v4_prefixes,
+	       sum(case when family(prefix) = 6 THEN 1 ELSE 0 END) as v6_prefixes,
+	       sum(case when rpki_origin_as > 0 and family(prefix) = 4 THEN 1 ELSE 0 END) as v4_with_rpki,
+	       sum(case when rpki_origin_as > 0 and family(prefix) = 6 THEN 1 ELSE 0 END) as v6_with_rpki,
+	       sum(case when irr_origin_as > 0 and family(prefix) = 4 THEN 1 ELSE 0 END) as v4_with_irr,
+	       sum(case when irr_origin_as > 0 and family(prefix) = 6 THEN 1 ELSE 0 END) as v6_with_irr
+	FROM global_ip_rib
+	GROUP BY recv_origin_as
+	ON CONFLICT (interval_time,asn) DO UPDATE SET v4_prefixes=excluded.v4_prefixes,
+	                                              v6_prefixes=excluded.v6_prefixes,
+	                                              v4_with_rpki=excluded.v4_with_rpki,
+	                                              v6_with_rpki=excluded.v6_with_rpki,
+	                                              v4_with_irr=excluded.v4_with_irr,
+	                                              v6_with_irr=excluded.v6_with_irr;
 
 
 END;
 $$ LANGUAGE plpgsql;
+
 
 
 -- Peer rib counts
@@ -212,6 +279,15 @@ CREATE INDEX ON stats_peer_rib (peer_hash_id);
 
 -- convert to timescaledb
 SELECT create_hypertable('stats_peer_rib', 'interval_time', chunk_time_interval => interval '1 month');
+
+ALTER TABLE stats_peer_rib SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id'
+	);
+
+SELECT add_compression_policy('stats_peer_rib', INTERVAL '2 days');
+SELECT add_retention_policy('stats_peer_rib', INTERVAL '4 weeks');
+
 
 --
 -- Function to update the per-peer RIB prefix counts
@@ -253,6 +329,15 @@ CREATE INDEX ON stats_peer_update_counts (peer_hash_id);
 
 -- convert to timescaledb
 SELECT create_hypertable('stats_peer_update_counts', 'interval_time', chunk_time_interval => interval '1 month');
+
+ALTER TABLE stats_peer_update_counts SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id'
+	);
+
+SELECT add_compression_policy('stats_peer_update_counts', INTERVAL '2 days');
+SELECT add_retention_policy('stats_peer_update_counts', INTERVAL '4 weeks');
+
 
 --
 -- Function snapshots the avg/min/max advertisements and withdrawals for each peer

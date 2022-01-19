@@ -58,6 +58,5 @@ public abstract class Query {
      * @return String in the format of (col1, col2, ...)[,...]
      */
     public abstract String genValuesStatement();
-	
 
 }

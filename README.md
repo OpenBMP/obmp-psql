@@ -76,12 +76,6 @@ Threads will be dynamically terminated if they are not needed.  This is controll
   #    is above threshold
   writer_rebalance_seconds: 1800
 
-  # By default AS Path indexing is enabled.  This can be very resource intensive to psql
-  #    and disk.   You can disable updating the psql 'as_path_analysis' table if
-  #    this analysis is not needed/used.  Disabling this will effect the gen_asn_stats
-  #    table, which will also effect anything that uses that table.
-  disable_as_path_indexing: false
-
 ```
 
 

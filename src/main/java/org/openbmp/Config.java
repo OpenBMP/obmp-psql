@@ -46,7 +46,6 @@ public class Config {
     private String cfg_file = null;
     private Integer expected_heartbeat_interval = 330000;
     private Integer stats_interval = 300;
-    private Boolean disable_as_path_indexing = false;
     private String db_host = "localhost:5432";
     private String db_user = "openbmp";
     private String db_pw = "openbmp";
@@ -181,8 +180,6 @@ public class Config {
                         else if (subEntry.getKey().equalsIgnoreCase("consumer_queue_size"))
                             consumer_queue_size = Integer.valueOf(subEntry.getValue().toString());
 
-                        else if (subEntry.getKey().equalsIgnoreCase("disable_as_path_indexing"))
-                            disable_as_path_indexing = Boolean.valueOf(subEntry.getValue().toString());
                     }
                 }
 
@@ -348,10 +345,6 @@ public class Config {
     }
 
     public Integer getHeartbeatInterval() { return expected_heartbeat_interval; }
-
-    Boolean getDisable_as_path_indexing() {
-        return disable_as_path_indexing;
-    }
 
     Integer getStatsInterval() { return stats_interval; }
 }

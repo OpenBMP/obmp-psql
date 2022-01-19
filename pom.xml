@@ -16,7 +16,7 @@
         <kafka.version>2.4.0</kafka.version>
         <psql.version>42.2.14</psql.version>
         <jackson-yaml.version>2.10.2</jackson-yaml.version>
-        <log4j.version>2.13.0</log4j.version>
+        <log4j.version>2.17.1</log4j.version>
     </properties>
 
     <version>0.1.0-${build.number}</version>
