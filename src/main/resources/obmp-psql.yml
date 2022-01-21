@@ -51,11 +51,18 @@ base:
   consumer_queue_size: 30000
 
 postgres:
+
+  # NOTE: host, db_name, username, password, ssl_enable and ssl_mode will be overwritten via docker ENV settings
   host    : "localhost:5432"
   db_name : "openbmp"
   username: "openbmp"
   password: "openbmp"
 
+  # Set to false to disable SSL
+  ssl_enable: true
+
+  # See https://jdbc.postgresql.org/documentation/documentation.html for configuring sslmode
+  ssl_mode: "require"
 
   # The number of statements or records to batch in a single bulk update/insert/delete
   #   NOTE: It's more efficient to have more threads with a low batch size

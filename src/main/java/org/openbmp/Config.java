@@ -53,6 +53,8 @@ public class Config {
     private Integer db_batch_time_millis = 75;
     private Integer db_batch_records = 200;
     private Integer db_retries = 10;
+    private String db_ssl_enable = "true";
+    private String db_ssl_mode = "require";
     private Properties kafka_consumer_props;
     private Set<Pattern> kafka_topic_patterns;
     private Integer topic_subscribe_delay_millis = 10000;       // topic subscription interval delay
@@ -200,6 +202,12 @@ public class Config {
                         else if (subEntry.getKey().equalsIgnoreCase("password"))
                             db_pw = subEntry.getValue().toString();
 
+                        else if (subEntry.getKey().equalsIgnoreCase("ssl_enable"))
+                            db_pw = subEntry.getValue().toString();
+
+                        else if (subEntry.getKey().equalsIgnoreCase("ssl_mode"))
+                            db_pw = subEntry.getValue().toString();
+
                         else if (subEntry.getKey().equalsIgnoreCase("batch_records"))
                             db_batch_records = Integer.valueOf(subEntry.getValue().toString());
 
@@ -342,6 +350,14 @@ public class Config {
 
     Integer getDb_retries() {
         return db_retries;
+    }
+
+    String getDbSslEnable() {
+        return db_ssl_enable;
+    }
+
+    String getDbSslMode() {
+        return db_ssl_mode;
     }
 
     public Integer getHeartbeatInterval() { return expected_heartbeat_interval; }

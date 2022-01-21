@@ -83,8 +83,8 @@ public class PSQLHandler {
             Properties props = new Properties();
             props.setProperty("user", cfg.getDbUser());
             props.setProperty("password", cfg.getDbPw());
-            props.setProperty("ssl", "true");
-            props.setProperty("sslmode", "require");
+            props.setProperty("ssl", cfg.getDbSslEnable());
+            props.setProperty("sslmode", cfg.getDbSslMode());
             props.setProperty("sslfactory", "org.postgresql.ssl.NonValidatingFactory");
             props.setProperty("connectTimeout", "10" /* seconds */);
             props.setProperty("socketTimeout", "30" /* seconds */);
