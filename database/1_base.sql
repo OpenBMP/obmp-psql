@@ -24,6 +24,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 -- -----------------------------------------------------
 -- Enums used in tables
 -- -----------------------------------------------------
+-- DROP TYPE  IF EXISTS opState CASCADE;
 CREATE TYPE opState as enum ('up', 'down', '');
 CREATE TYPE user_role as enum ('admin', 'oper', '');
 CREATE TYPE ls_proto as enum ('IS-IS_L1', 'IS-IS_L2', 'OSPFv2', 'Direct', 'Static', 'OSPFv3', '');
@@ -35,7 +36,7 @@ CREATE TYPE ls_mpls_proto_mask as enum('LDP', 'RSVP-TE', '');
 -- -----------------------------------------------------
 
 -- Table structure for table geo_ip
-DROP TABLE IF EXISTS geo_ip;
+DROP TABLE IF EXISTS geo_ip CASCADE;
 CREATE TABLE geo_ip (
   family                smallint        NOT NULL,
   ip                    inet            NOT NULL,
@@ -91,7 +92,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Table structure for table rpki_validator
-DROP TABLE IF EXISTS rpki_validator;
+DROP TABLE IF EXISTS rpki_validator CASCADE;
 CREATE TABLE rpki_validator (
 	prefix              inet            NOT NULL,
 	prefix_len          smallint        NOT NULL DEFAULT 0,
@@ -111,7 +112,7 @@ CREATE INDEX ON rpki_validator USING gist (prefix inet_ops);
 --    CREATE EXTENSION pgcrypto;
 --             Create: crypt('new password', gen_salt('md5'));
 --             Check:  select ...  WHERE password = crypt('user entered pw', password);
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
 	username            varchar(50)     NOT NULL,
 	password            varchar(50)     NOT NULL,
@@ -122,7 +123,7 @@ INSERT INTO users (username,password,type) VALUES ('openbmp', 'openbmp', 'admin'
 
 
 -- Table structure for table collectors
-DROP TABLE IF EXISTS collectors;
+DROP TABLE IF EXISTS collectors CASCADE;
 CREATE TABLE collectors (
 	hash_id             uuid                NOT NULL,
 	state               opState             DEFAULT 'down',
@@ -140,7 +141,7 @@ ALTER TABLE collectors SET (autovacuum_vacuum_threshold = 50);
 
 
 -- Table structure for table routers
-DROP TABLE IF EXISTS routers;
+DROP TABLE IF EXISTS routers CASCADE;
 CREATE TABLE routers (
 	hash_id             uuid                NOT NULL,
 	name                varchar(200)        NOT NULL,
@@ -169,7 +170,7 @@ ALTER TABLE routers SET (autovacuum_vacuum_threshold = 50);
 
 
 -- Table structure for table bgp_peers
-DROP TABLE IF EXISTS bgp_peers;
+DROP TABLE IF EXISTS bgp_peers CASCADE;
 CREATE TABLE bgp_peers (
 	hash_id                 uuid                NOT NULL,
 	router_hash_id          uuid                NOT NULL,
@@ -214,7 +215,7 @@ ALTER TABLE bgp_peers SET (autovacuum_vacuum_threshold = 50);
 
 -- Table structure for table peer_event_log
 --     updated by bgp_peers trigger
-DROP TABLE IF EXISTS peer_event_log;
+DROP TABLE IF EXISTS peer_event_log CASCADE;
 CREATE TABLE peer_event_log (
 	id                  bigserial               NOT NULL,
 	state               opState                 NOT NULL,
@@ -246,7 +247,7 @@ SELECT add_retention_policy('peer_event_log', INTERVAL '4 months');
 
 -- Table structure for table stat_reports
 --     TimescaleDB
-DROP TABLE IF EXISTS stat_reports;
+DROP TABLE IF EXISTS stat_reports CASCADE;
 CREATE TABLE stat_reports (
 	id                                  bigserial               NOT NULL,
 	peer_hash_id                        uuid                    NOT NULL,
@@ -271,7 +272,7 @@ SELECT add_retention_policy('stat_reports', INTERVAL '8 weeks');
 
 -- Table structure for table base_attrs
 --    https://blog.dbi-services.com/hash-partitioning-in-postgresql-11/
-DROP TABLE IF EXISTS base_attrs;
+DROP TABLE IF EXISTS base_attrs CASCADE;
 CREATE TABLE base_attrs (
 	hash_id                 uuid                NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
@@ -307,7 +308,7 @@ CREATE INDEX ON base_attrs (peer_hash_id, hash_id);
 
 -- Table structure for table rib
 --    https://blog.dbi-services.com/hash-partitioning-in-postgresql-11/--
-DROP TABLE IF EXISTS ip_rib;
+DROP TABLE IF EXISTS ip_rib CASCADE;
 CREATE TABLE ip_rib (
 	hash_id                 uuid                NOT NULL,
     base_attr_hash_id       uuid,
@@ -339,7 +340,7 @@ CREATE INDEX ON ip_rib (peer_hash_id,origin_as);
 
 
 -- Table structure for table ip_rib_log
-DROP TABLE IF EXISTS ip_rib_log;
+DROP TABLE IF EXISTS ip_rib_log CASCADE;
 CREATE TABLE ip_rib_log (
     id                      bigserial           NOT NULL,
 	base_attr_hash_id       uuid                NOT NULL,
@@ -377,7 +378,7 @@ SELECT create_hypertable('ip_rib_log', 'timestamp', chunk_time_interval => inter
 SELECT add_retention_policy('ip_rib_log', INTERVAL '3 months');
 
 -- Table structure for global ip rib
-DROP TABLE IF EXISTS global_ip_rib;
+DROP TABLE IF EXISTS global_ip_rib CASCADE;
 CREATE TABLE global_ip_rib (
     prefix                  inet                NOT NULL,
   	iswithdrawn             boolean             NOT NULL DEFAULT false,
@@ -407,7 +408,7 @@ ALTER TABLE global_ip_rib SET (autovacuum_vacuum_cost_delay = 5);
 
 
 -- Table structure for table info_asn (based on whois)
-DROP TABLE IF EXISTS info_asn;
+DROP TABLE IF EXISTS info_asn CASCADE;
 CREATE TABLE info_asn (
     asn                     bigint              NOT NULL,
     as_name                 varchar(255),
@@ -430,7 +431,7 @@ ALTER TABLE info_asn SET (autovacuum_analyze_threshold = 50);
 ALTER TABLE info_asn SET (autovacuum_vacuum_threshold = 50);
 
 -- Table structure for table info_route (based on whois)
-DROP TABLE IF EXISTS info_route;
+DROP TABLE IF EXISTS info_route CASCADE;
 CREATE TABLE info_route (
     prefix                  inet                NOT NULL,
     prefix_len              smallint            NOT NULL DEFAULT 0,
@@ -447,7 +448,7 @@ ALTER TABLE info_route SET (autovacuum_analyze_threshold = 50);
 ALTER TABLE info_route SET (autovacuum_vacuum_threshold = 50);
 
 -- Table structure for table peering DB peerings by exchange
-DROP TABLE IF EXISTS pdb_exchange_peers;
+DROP TABLE IF EXISTS pdb_exchange_peers CASCADE;
 CREATE TABLE pdb_exchange_peers (
     ix_id                   int                 NOT NULL,
     ix_name                 varchar(128)        NOT NULL,
@@ -478,7 +479,7 @@ CREATE INDEX ON pdb_exchange_peers (peer_asn);
 
 
 -- Alerts table for security monitoring
-DROP TABLE IF EXISTS alerts;
+DROP TABLE IF EXISTS alerts CASCADE;
 CREATE TABLE alerts (
 	id                      bigserial           NOT NULL,
     type                    varchar(128)        NOT NULL,
@@ -504,7 +505,7 @@ SELECT add_retention_policy('alerts', INTERVAL '8 weeks');
 
 
 -- Table structure for link state nodes
-DROP TABLE IF EXISTS ls_nodes;
+DROP TABLE IF EXISTS ls_nodes CASCADE;
 CREATE TABLE ls_nodes (
     hash_id                 uuid                NOT NULL,
     peer_hash_id            uuid                NOT NULL,
@@ -538,7 +539,7 @@ ALTER TABLE ls_nodes SET (autovacuum_vacuum_cost_limit = 1000);
 ALTER TABLE ls_nodes SET (autovacuum_vacuum_cost_delay = 5);
 
 -- Table structure for table ls_nodes_log
-DROP TABLE IF EXISTS ls_nodes_log;
+DROP TABLE IF EXISTS ls_nodes_log CASCADE;
 CREATE TABLE ls_nodes_log (
     id                      bigserial           NOT NULL,
     hash_id                 uuid                NOT NULL,
@@ -570,7 +571,7 @@ SELECT add_retention_policy('ls_nodes_log', INTERVAL '8 weeks');
 
 
 -- Table structure for link state links
-DROP TABLE IF EXISTS ls_links;
+DROP TABLE IF EXISTS ls_links CASCADE;
 CREATE TABLE ls_links (
 	  hash_id                 uuid                NOT NULL,
 	  peer_hash_id            uuid                NOT NULL,
@@ -619,7 +620,7 @@ ALTER TABLE ls_links SET (autovacuum_vacuum_cost_limit = 1000);
 ALTER TABLE ls_links SET (autovacuum_vacuum_cost_delay = 5);
 
 -- Table structure for table ls_links_log
-DROP TABLE IF EXISTS ls_links_log;
+DROP TABLE IF EXISTS ls_links_log CASCADE;
 CREATE TABLE ls_links_log (
 	  id                      bigserial           NOT NULL,
 	  hash_id                 uuid                NOT NULL,
@@ -669,7 +670,7 @@ SELECT add_retention_policy('ls_links_log', INTERVAL '8 weeks');
 
 
 -- Table structure for link state prefixes
-DROP TABLE IF EXISTS ls_prefixes;
+DROP TABLE IF EXISTS ls_prefixes CASCADE;
 CREATE TABLE ls_prefixes (
       hash_id                 uuid                NOT NULL,
       peer_hash_id            uuid                NOT NULL,
@@ -701,7 +702,7 @@ ALTER TABLE ls_prefixes SET (autovacuum_vacuum_cost_limit = 1000);
 ALTER TABLE ls_prefixes SET (autovacuum_vacuum_cost_delay = 5);
 
 -- Table structure for table ls_nodes_log
-DROP TABLE IF EXISTS ls_prefixes_log;
+DROP TABLE IF EXISTS ls_prefixes_log CASCADE;
 CREATE TABLE ls_prefixes_log (
       id                      bigserial           NOT NULL,
       hash_id                 uuid                NOT NULL,

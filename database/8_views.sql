@@ -6,7 +6,7 @@
 -- -----------------------------------------------------------------------
 
 
-drop view IF EXISTS v_peers;
+drop view IF EXISTS v_peers CASCADE;
 CREATE VIEW v_peers AS
 SELECT CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE  host(rtr.ip_address) END AS RouterName, rtr.ip_address as RouterIP,
                 p.local_ip as LocalIP, p.local_port as LocalPort, p.local_asn as LocalASN, p.local_bgp_id as LocalBGPId,
@@ -28,7 +28,7 @@ SELECT CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE  host(rtr.ip_address) E
         FROM bgp_peers p JOIN routers rtr ON (p.router_hash_id = rtr.hash_id)
                                          LEFT JOIN info_asn w ON (p.peer_as = w.asn);
 
-drop view IF EXISTS v_ip_routes;
+drop view IF EXISTS v_ip_routes CASCADE;
 CREATE  VIEW v_ip_routes AS
        SELECT  CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE host(rtr.ip_address) END AS RouterName,
                 CASE WHEN length(p.name) > 0 THEN p.name ELSE host(p.peer_addr) END AS PeerName,
@@ -50,7 +50,7 @@ CREATE  VIEW v_ip_routes AS
             JOIN base_attrs attr ON (attr.hash_id = r.base_attr_hash_id and attr.peer_hash_id = r.peer_hash_id)
             JOIN routers rtr ON (p.router_hash_id = rtr.hash_id);
 
-drop view IF EXISTS v_ip_routes_geo;
+drop view IF EXISTS v_ip_routes_geo CASCADE;
 CREATE  VIEW v_ip_routes_geo AS
        SELECT  CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE host(rtr.ip_address) END AS RouterName,
                 CASE WHEN length(p.name) > 0 THEN p.name ELSE host(p.peer_addr) END AS PeerName,
@@ -77,7 +77,7 @@ CREATE  VIEW v_ip_routes_geo AS
         WHERE  r.isWithdrawn = false;
 
 
-drop view IF EXISTS v_ip_routes_history;
+drop view IF EXISTS v_ip_routes_history CASCADE;
 CREATE VIEW v_ip_routes_history AS
   SELECT
              CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE host(rtr.ip_address) END AS RouterName,
@@ -103,7 +103,7 @@ CREATE VIEW v_ip_routes_history AS
 ---
 --- Link State Views
 ---
-drop view IF EXISTS v_ls_nodes;
+drop view IF EXISTS v_ls_nodes CASCADE;
 CREATE VIEW v_ls_nodes AS
 SELECT r.name as RouterName,r.ip_address as RouterIP,
 		p.name as PeerName, p.peer_addr as PeerIP,igp_router_id as IGP_RouterId,
@@ -121,7 +121,7 @@ SELECT r.name as RouterName,r.ip_address as RouterIP,
     WHERE not ls_nodes.igp_router_id ~ '\..[1-9A-F]00$' AND ls_nodes.igp_router_id not like '%]';
 
 
-drop view IF EXISTS v_ls_links;
+drop view IF EXISTS v_ls_links CASCADE;
 CREATE VIEW v_ls_links AS
 SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
         localn.igp_router_id as Local_IGP_RouterId,localn.router_id as Local_RouterId,
@@ -141,7 +141,7 @@ SELECT localn.name as Local_Router_Name,remoten.name as Remote_Router_Name,
 			AND ln.peer_hash_id = remoten.peer_hash_id);
 
 
-drop view IF EXISTS v_ls_prefixes;
+drop view IF EXISTS v_ls_prefixes CASCADE;
 CREATE VIEW v_ls_prefixes AS
 SELECT localn.name as Local_Router_Name,localn.igp_router_id as Local_IGP_RouterId,
          localn.router_id as Local_RouterId,

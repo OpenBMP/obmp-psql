@@ -6,7 +6,7 @@
 -- -----------------------------------------------------------------------
 
 -- advertisement and withdrawal changes by peer
-DROP TABLE IF EXISTS stats_chg_bypeer;
+DROP TABLE IF EXISTS stats_chg_bypeer CASCADE;
 CREATE TABLE stats_chg_bypeer (
 	interval_time           timestamp(6)        without time zone NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
@@ -29,7 +29,7 @@ SELECT add_retention_policy('stats_chg_bypeer', INTERVAL '4 weeks');
 SELECT add_compression_policy('stats_chg_bypeer', INTERVAL '2 days');
 
 -- advertisement and withdrawal changes by asn
-DROP TABLE IF EXISTS stats_chg_byasn;
+DROP TABLE IF EXISTS stats_chg_byasn CASCADE;
 CREATE TABLE stats_chg_byasn (
 	interval_time           timestamp(6)        without time zone NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
@@ -54,7 +54,7 @@ SELECT add_compression_policy('stats_chg_byasn', INTERVAL '2 days');
 SELECT add_retention_policy('stats_chg_byasn', INTERVAL '4 weeks');
 
 -- advertisement and withdrawal changes by prefix
-DROP TABLE IF EXISTS stats_chg_byprefix;
+DROP TABLE IF EXISTS stats_chg_byprefix CASCADE;
 CREATE TABLE stats_chg_byprefix (
 	interval_time           timestamp(6)        without time zone NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
@@ -133,7 +133,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Origin ASN stats
-DROP TABLE IF EXISTS stats_ip_origins;
+DROP TABLE IF EXISTS stats_ip_origins CASCADE;
 CREATE TABLE stats_ip_origins (
 	id                      bigserial           NOT NULL,
 	interval_time           timestamp(6)        without time zone NOT NULL,
@@ -265,7 +265,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Peer rib counts
-DROP TABLE IF EXISTS stats_peer_rib;
+DROP TABLE IF EXISTS stats_peer_rib CASCADE;
 CREATE TABLE stats_peer_rib (
 	interval_time           timestamp(6)        without time zone NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
@@ -311,7 +311,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Peer past updates counts
-DROP TABLE IF EXISTS stats_peer_update_counts;
+DROP TABLE IF EXISTS stats_peer_update_counts CASCADE;
 CREATE TABLE stats_peer_update_counts (
 	interval_time           timestamp(6)        without time zone NOT NULL,
 	peer_hash_id            uuid                NOT NULL,
