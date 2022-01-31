@@ -203,10 +203,10 @@ public class Config {
                             db_pw = subEntry.getValue().toString();
 
                         else if (subEntry.getKey().equalsIgnoreCase("ssl_enable"))
-                            db_pw = subEntry.getValue().toString();
+                            db_ssl_enable = subEntry.getValue().toString();
 
                         else if (subEntry.getKey().equalsIgnoreCase("ssl_mode"))
-                            db_pw = subEntry.getValue().toString();
+                            db_ssl_mode = subEntry.getValue().toString();
 
                         else if (subEntry.getKey().equalsIgnoreCase("batch_records"))
                             db_batch_records = Integer.valueOf(subEntry.getValue().toString());
