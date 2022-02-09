@@ -298,6 +298,36 @@ DROP TRIGGER IF EXISTS upd_ls_prefixes ON ls_prefixes;
 CREATE TRIGGER upd_ls_prefixes BEFORE UPDATE ON ls_prefixes
 	FOR EACH ROW
 		EXECUTE PROCEDURE t_ls_prefixes_update();
+
+
+---
+--- L3VPN
+---
+CREATE OR REPLACE FUNCTION t_l3vpn_rib_update()
+	RETURNS trigger AS $$
+BEGIN
+	IF (new.isWithdrawn) THEN
+		INSERT INTO l3vpn_rib_log (isWithdrawn,prefix,prefix_len,base_attr_hash_id,peer_hash_id,origin_as,timestamp,
+		                           rd,ext_community_list)
+		VALUES (true,new.prefix,new.prefix_len,old.base_attr_hash_id,new.peer_hash_id,
+		        old.origin_as,new.timestamp,old.rd,old.ext_community_list);
+	ELSE
+		INSERT INTO l3vpn_rib_log (isWithdrawn,prefix,prefix_len,base_attr_hash_id,peer_hash_id,origin_as,timestamp,
+		                           rd,ext_community_list)
+		VALUES (false,new.prefix,new.prefix_len,new.base_attr_hash_id,new.peer_hash_id,
+		        new.origin_as,new.timestamp,new.rd,new.ext_community_list);
+	END IF;
+
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS upd_l3vpn_rib ON l3vpn_rib;
+CREATE TRIGGER upd_l3vpn_rib AFTER UPDATE ON l3vpn_rib
+	FOR EACH ROW
+	WHEN ((new.isWithdrawn <> old.isWithdrawn) OR
+	      (not new.isWithdrawn AND new.base_attr_hash_id <> old.base_attr_hash_id))
+EXECUTE PROCEDURE t_l3vpn_rib_update();
 --
 -- END
 --

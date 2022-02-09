@@ -15,7 +15,7 @@ requirements.txt - PIP requirements file
 ### Execution 
 
 Deploy as a container:
-`docker run --name peeringdb -d -e "PGDATABASE=x" -e "PGUSER=x" -e "PGPASSWORD=x" -e "PGHOST=x" -e "PGPORT=5432" cnis/peeringdb`
+`docker run --name peeringdb -d -e "PGDATABASE=x" -e "PGUSER=x" -e "PGPASSWORD=x" -e "PGHOST=x" -e "PGPORT=5432" openbmp/peeringdb`
 
 
 Run manually:

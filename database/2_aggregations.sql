@@ -365,6 +365,137 @@ BEGIN
              withdraw_max=excluded.withdraw_max;
 END;
 $$ LANGUAGE plpgsql;
+
+--
+-- L3VPN stat tables
+--
+DROP TABLE IF EXISTS stats_l3vpn_chg_byprefix CASCADE;
+CREATE TABLE stats_l3vpn_chg_bypeer (
+          interval_time           timestamp(6)        without time zone NOT NULL,
+          peer_hash_id            uuid                NOT NULL,
+          updates                 bigint              NOT NULL DEFAULT 0,
+          withdraws               bigint              NOT NULL DEFAULT 0
+) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+
+CREATE UNIQUE INDEX ON stats_l3vpn_chg_bypeer (interval_time,peer_hash_id);
+CREATE INDEX ON stats_l3vpn_chg_bypeer (peer_hash_id);
+
+-- convert to timescaledb
+SELECT create_hypertable('stats_l3vpn_chg_bypeer', 'interval_time', chunk_time_interval => interval '6 hours');
+
+ALTER TABLE stats_l3vpn_chg_bypeer SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id'
+	);
+
+SELECT add_retention_policy('stats_l3vpn_chg_bypeer', INTERVAL '4 weeks');
+SELECT add_compression_policy('stats_l3vpn_chg_bypeer', INTERVAL '2 days');
+
+-- advertisement and withdrawal changes by prefix
+DROP TABLE IF EXISTS stats_l3vpn_chg_byprefix CASCADE;
+CREATE TABLE stats_l3vpn_chg_byprefix (
+                interval_time           timestamp(6)        without time zone NOT NULL,
+                peer_hash_id            uuid                NOT NULL,
+                prefix                  inet                NOT NULL,
+                prefix_len              smallint            NOT NULL,
+                updates                 bigint              NOT NULL DEFAULT 0,
+                withdraws               bigint              NOT NULL DEFAULT 0
+) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+
+CREATE UNIQUE INDEX ON stats_l3vpn_chg_byprefix (interval_time,peer_hash_id,prefix);
+CREATE INDEX ON stats_l3vpn_chg_byprefix (peer_hash_id);
+CREATE INDEX ON stats_l3vpn_chg_byprefix (prefix);
+
+
+-- convert to timescaledb
+SELECT create_hypertable('stats_l3vpn_chg_byprefix', 'interval_time', chunk_time_interval => interval '6 hours');
+
+ALTER TABLE stats_l3vpn_chg_byprefix SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id,prefix'
+	);
+
+SELECT add_compression_policy('stats_l3vpn_chg_byprefix', INTERVAL '2 days');
+SELECT add_retention_policy('stats_l3vpn_chg_byprefix', INTERVAL '4 weeks');
+
+
+-- advertisement and withdrawal changes by rd
+DROP TABLE IF EXISTS stats_l3vpn_chg_byrd CASCADE;
+CREATE TABLE stats_l3vpn_chg_byrd (
+                 interval_time           timestamp(6)        without time zone NOT NULL,
+                 peer_hash_id            uuid                NOT NULL,
+                 rd                      varchar(128)        NOT NULL,
+                 updates                 bigint              NOT NULL DEFAULT 0,
+                 withdraws               bigint              NOT NULL DEFAULT 0
+) WITH (autovacuum_enabled = false) TABLESPACE timeseries ;
+
+CREATE UNIQUE INDEX ON stats_l3vpn_chg_byrd (interval_time,peer_hash_id,rd);
+CREATE INDEX ON stats_l3vpn_chg_byrd (peer_hash_id);
+CREATE INDEX ON stats_l3vpn_chg_byrd (rd);
+
+-- convert to timescaledb
+SELECT create_hypertable('stats_l3vpn_chg_byrd', 'interval_time', chunk_time_interval => interval '6 hours');
+
+ALTER TABLE stats_l3vpn_chg_byrd SET (
+	timescaledb.compress,
+	timescaledb.compress_segmentby = 'peer_hash_id,rd'
+	);
+
+SELECT add_compression_policy('stats_l3vpn_chg_byrd', INTERVAL '2 days');
+SELECT add_retention_policy('stats_l3vpn_chg_byrd', INTERVAL '4 weeks');
+
+
+--
+-- Function to update the l3vpn change stats tables (bypeer, byasn, and byprefix).
+--
+CREATE OR REPLACE FUNCTION update_l3vpn_chg_stats(int_window interval)
+	RETURNS void AS $$
+BEGIN
+	-- bypeer updates
+	INSERT INTO stats_l3vpn_chg_bypeer (interval_time, peer_hash_id, withdraws,updates)
+	SELECT
+			time_bucket(int_window, now()) as IntervalTime,
+			peer_hash_id,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = true THEN 1 ELSE null END) as withdraws,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = false THEN 1 ELSE null END) as updates
+	FROM l3vpn_rib_log
+	WHERE timestamp >= time_bucket(int_window, now())
+	  AND timestamp < now()
+	GROUP BY IntervalTime,peer_hash_id
+	ON CONFLICT (interval_time,peer_hash_id) DO UPDATE
+		SET updates=excluded.updates, withdraws=excluded.withdraws;
+
+	-- byrd updates
+	INSERT INTO stats_l3vpn_chg_byrd (interval_time, peer_hash_id, rd,withdraws,updates)
+	SELECT
+			time_bucket(int_window, now()) as IntervalTime,
+			peer_hash_id,rd,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = true THEN 1 ELSE null END) as withdraws,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = false THEN 1 ELSE null END) as updates
+	FROM l3vpn_rib_log
+	WHERE timestamp >= time_bucket(int_window, now())
+	  AND timestamp < now()
+	GROUP BY IntervalTime,peer_hash_id,rd
+	ON CONFLICT (interval_time,peer_hash_id,rd) DO UPDATE
+		SET updates=excluded.updates, withdraws=excluded.withdraws;
+
+	-- byprefix updates
+	INSERT INTO stats_l3vpn_chg_byprefix (interval_time, peer_hash_id, prefix, prefix_len, withdraws,updates)
+	SELECT
+			time_bucket(int_window, now()) as IntervalTime,
+			peer_hash_id,prefix,prefix_len,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = true THEN 1 ELSE null END) as withdraws,
+			count(case WHEN l3vpn_rib_log.iswithdrawn = false THEN 1 ELSE null END) as updates
+	FROM l3vpn_rib_log
+	WHERE timestamp >= time_bucket(int_window, now())
+	  AND timestamp < now()
+	GROUP BY IntervalTime,peer_hash_id,prefix,prefix_len
+	ON CONFLICT (interval_time,peer_hash_id,prefix) DO UPDATE
+		SET updates=excluded.updates, withdraws=excluded.withdraws;
+
+END;
+$$ LANGUAGE plpgsql;
+
 --
 -- END
 --

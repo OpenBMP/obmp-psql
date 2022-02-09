@@ -151,6 +151,32 @@ SELECT localn.name as Local_Router_Name,localn.igp_router_id as Local_IGP_Router
     FROM ls_prefixes lp JOIN ls_nodes localn ON (localn.peer_hash_id = lp.peer_hash_id
                                                  AND lp.local_node_hash_id = localn.hash_id);
 
+
+--
+-- L3VPN
+--
+drop view IF EXISTS v_l3vpn_routes CASCADE;
+CREATE  VIEW v_l3vpn_routes AS
+SELECT  CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE host(rtr.ip_address) END AS RouterName,
+        CASE WHEN length(p.name) > 0 THEN p.name ELSE host(p.peer_addr) END AS PeerName,
+        r.rd,r.prefix AS Prefix,r.prefix_len AS PrefixLen,
+        attr.origin AS Origin,r.origin_as AS Origin_AS,attr.med AS MED,
+        attr.local_pref AS LocalPref,attr.next_hop AS NH,attr.as_path AS AS_Path,
+        attr.as_path_count AS ASPath_Count,attr.community_list AS Communities,
+        r.ext_community_list AS ExtCommunities,attr.large_community_list AS LargeCommunities,
+        attr.cluster_list AS ClusterList,
+        attr.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,r.isIPv4 as isIPv4,
+        p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,
+        r.timestamp AS LastModified, r.first_added_timestamp as FirstAddedTimestamp,
+        r.path_id, r.labels,
+        r.hash_id as rib_hash_id,
+        r.base_attr_hash_id as base_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,
+        r.isPrePolicy,r.isAdjRibIn
+FROM l3vpn_rib r
+	     JOIN bgp_peers p ON (r.peer_hash_id = p.hash_id)
+	     JOIN base_attrs attr ON (attr.hash_id = r.base_attr_hash_id and attr.peer_hash_id = r.peer_hash_id)
+	     JOIN routers rtr ON (p.router_hash_id = rtr.hash_id);
+
 --
 -- END
 --

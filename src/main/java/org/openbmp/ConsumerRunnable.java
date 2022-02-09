@@ -21,6 +21,7 @@ import org.openbmp.api.parsed.message.*;
 import org.openbmp.api.parsed.processor.Router;
 import org.openbmp.api.parsed.processor.Peer;
 import org.openbmp.api.parsed.processor.UnicastPrefix;
+import org.openbmp.api.parsed.processor.L3VpnPrefix;
 import org.openbmp.api.parsed.processor.Collector;
 import org.openbmp.api.parsed.processor.BaseAttribute;
 import org.openbmp.api.parsed.processor.LsNode;
@@ -503,8 +504,8 @@ public class ConsumerRunnable implements Runnable {
                         logger.trace("Parsing L3VPN prefix message");
                         l3vpn_prefix_msg_count++;
 
-                        obj = new L3VpnPrefix(message.getVersion(), message.getContent());
-                        dbQuery = new L3VpnPrefixQuery(obj.getRowMap());
+                        L3VpnPrefix vp = new L3VpnPrefix(message.getContent());
+                        dbQuery = new L3VpnPrefixQuery(vp.records);
 
                     } else if ((message.getType() != null && message.getType().equalsIgnoreCase("bmp_stat"))
                             || record.topic().equals("openbmp.parsed.bmp_stat")) {
