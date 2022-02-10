@@ -298,6 +298,9 @@ DROP TRIGGER IF EXISTS upd_ls_prefixes ON ls_prefixes;
 CREATE TRIGGER upd_ls_prefixes BEFORE UPDATE ON ls_prefixes
 	FOR EACH ROW
 		EXECUTE PROCEDURE t_ls_prefixes_update();
+
+
+
 --
 -- END
 --

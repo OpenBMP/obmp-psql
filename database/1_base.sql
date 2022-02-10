@@ -734,6 +734,8 @@ CREATE INDEX ON ls_prefixes_log USING GIST (prefix inet_ops);
 SELECT create_hypertable('ls_prefixes_log', 'timestamp', chunk_time_interval => interval '30 day');
 SELECT add_retention_policy('ls_prefixes_log', INTERVAL '8 weeks');
 
+
+
 --
 -- END
 --

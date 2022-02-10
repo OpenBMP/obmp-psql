@@ -151,6 +151,7 @@ SELECT localn.name as Local_Router_Name,localn.igp_router_id as Local_IGP_Router
     FROM ls_prefixes lp JOIN ls_nodes localn ON (localn.peer_hash_id = lp.peer_hash_id
                                                  AND lp.local_node_hash_id = localn.hash_id);
 
+
 --
 -- END
 --
