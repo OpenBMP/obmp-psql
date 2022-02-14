@@ -10,7 +10,6 @@ package org.openbmp.psqlquery;
 
 import java.util.List;
 
-import org.openbmp.api.helpers.IpAddr;
 import org.openbmp.api.parsed.message.L3VpnPrefixPojo;
 
 import static org.openbmp.psqlquery.PsqlFunctions.create_psql_array;
