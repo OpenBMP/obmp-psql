@@ -95,6 +95,26 @@ FROM l3vpn_rib r
 	     JOIN base_attrs attr ON (attr.hash_id = r.base_attr_hash_id and attr.peer_hash_id = r.peer_hash_id)
 	     JOIN routers rtr ON (p.router_hash_id = rtr.hash_id);
 
+drop view IF EXISTS v_l3vpn_routes_history CASCADE;
+CREATE  VIEW v_l3vpn_routes_history AS
+SELECT  r.id,CASE WHEN length(rtr.name) > 0 THEN rtr.name ELSE host(rtr.ip_address) END AS RouterName,
+        CASE WHEN length(p.name) > 0 THEN p.name ELSE host(p.peer_addr) END AS PeerName,
+        r.rd,r.prefix AS Prefix,r.prefix_len AS PrefixLen,
+        attr.origin AS Origin,r.origin_as AS Origin_AS,attr.med AS MED,
+        attr.local_pref AS LocalPref,attr.next_hop AS NH,attr.as_path AS AS_Path,
+        attr.as_path_count AS ASPath_Count,attr.community_list AS Communities,
+        r.ext_community_list AS ExtCommunities,attr.large_community_list AS LargeCommunities,
+        attr.cluster_list AS ClusterList,
+        attr.aggregator AS Aggregator,p.peer_addr AS PeerAddress, p.peer_as AS PeerASN,
+        p.isIPv4 as isPeerIPv4, p.isL3VPNpeer as isPeerVPN,
+        r.timestamp AS LastModified,
+        r.base_attr_hash_id as base_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,
+        CASE WHEN r.iswithdrawn THEN 'Withdrawn' ELSE 'Advertised' END as event,
+        r.isPrePolicy,r.isAdjRibIn
+FROM l3vpn_rib_log r
+	     JOIN bgp_peers p ON (r.peer_hash_id = p.hash_id)
+	     JOIN base_attrs attr ON (attr.hash_id = r.base_attr_hash_id and attr.peer_hash_id = r.peer_hash_id)
+	     JOIN routers rtr ON (p.router_hash_id = rtr.hash_id);
 
 ---
 --- L3VPN Triggers
