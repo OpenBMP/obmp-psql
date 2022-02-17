@@ -130,11 +130,11 @@ EXECUTE PROCEDURE t_l3vpn_rib_update();
 --
 DROP TABLE IF EXISTS stats_l3vpn_chg_byprefix CASCADE;
 CREATE TABLE stats_l3vpn_chg_bypeer (
-	                                    interval_time           timestamp(6)        without time zone NOT NULL,
-	                                    peer_hash_id            uuid                NOT NULL,
-	                                    updates                 bigint              NOT NULL DEFAULT 0,
-	                                    withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+        interval_time           timestamp(6)        without time zone NOT NULL,
+        peer_hash_id            uuid                NOT NULL,
+        updates                 bigint              NOT NULL DEFAULT 0,
+        withdraws               bigint              NOT NULL DEFAULT 0
+) TABLESPACE timeseries;
 
 CREATE UNIQUE INDEX ON stats_l3vpn_chg_bypeer (interval_time,peer_hash_id);
 CREATE INDEX ON stats_l3vpn_chg_bypeer (peer_hash_id);
@@ -153,17 +153,20 @@ SELECT add_compression_policy('stats_l3vpn_chg_bypeer', INTERVAL '2 days');
 -- advertisement and withdrawal changes by prefix
 DROP TABLE IF EXISTS stats_l3vpn_chg_byprefix CASCADE;
 CREATE TABLE stats_l3vpn_chg_byprefix (
-	                                      interval_time           timestamp(6)        without time zone NOT NULL,
-	                                      peer_hash_id            uuid                NOT NULL,
-	                                      prefix                  inet                NOT NULL,
-	                                      prefix_len              smallint            NOT NULL,
-	                                      updates                 bigint              NOT NULL DEFAULT 0,
-	                                      withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+          interval_time           timestamp(6)        without time zone NOT NULL,
+          peer_hash_id            uuid                NOT NULL,
+          prefix                  inet                NOT NULL,
+          prefix_len              smallint            NOT NULL,
+          rd                      varchar(128)        NOT NULL,
+          updates                 bigint              NOT NULL DEFAULT 0,
+          withdraws               bigint              NOT NULL DEFAULT 0
+) TABLESPACE timeseries;
 
-CREATE UNIQUE INDEX ON stats_l3vpn_chg_byprefix (interval_time,peer_hash_id,prefix);
+CREATE UNIQUE INDEX ON stats_l3vpn_chg_byprefix (interval_time,peer_hash_id,prefix,rd);
 CREATE INDEX ON stats_l3vpn_chg_byprefix (peer_hash_id);
-CREATE INDEX ON stats_l3vpn_chg_byprefix (prefix);
+CREATE INDEX ON stats_l3vpn_chg_byprefix (prefix,rd);
+CREATE INDEX ON stats_l3vpn_chg_byprefix (rd);
+
 
 
 -- convert to timescaledb
@@ -181,12 +184,12 @@ SELECT add_retention_policy('stats_l3vpn_chg_byprefix', INTERVAL '4 weeks');
 -- advertisement and withdrawal changes by rd
 DROP TABLE IF EXISTS stats_l3vpn_chg_byrd CASCADE;
 CREATE TABLE stats_l3vpn_chg_byrd (
-	                                  interval_time           timestamp(6)        without time zone NOT NULL,
-	                                  peer_hash_id            uuid                NOT NULL,
-	                                  rd                      varchar(128)        NOT NULL,
-	                                  updates                 bigint              NOT NULL DEFAULT 0,
-	                                  withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries ;
+	      interval_time           timestamp(6)        without time zone NOT NULL,
+	      peer_hash_id            uuid                NOT NULL,
+	      rd                      varchar(128)        NOT NULL,
+	      updates                 bigint              NOT NULL DEFAULT 0,
+	      withdraws               bigint              NOT NULL DEFAULT 0
+) TABLESPACE timeseries ;
 
 CREATE UNIQUE INDEX ON stats_l3vpn_chg_byrd (interval_time,peer_hash_id,rd);
 CREATE INDEX ON stats_l3vpn_chg_byrd (peer_hash_id);
@@ -239,17 +242,17 @@ BEGIN
 		SET updates=excluded.updates, withdraws=excluded.withdraws;
 
 	-- byprefix updates
-	INSERT INTO stats_l3vpn_chg_byprefix (interval_time, peer_hash_id, prefix, prefix_len, withdraws,updates)
+	INSERT INTO stats_l3vpn_chg_byprefix (interval_time, peer_hash_id, prefix, prefix_len, rd, withdraws,updates)
 	SELECT
 		time_bucket(int_window, now() - int_window) as IntervalTime,
-		peer_hash_id,prefix,prefix_len,
+		peer_hash_id,prefix,prefix_len,rd,
 		count(case WHEN l3vpn_rib_log.iswithdrawn = true THEN 1 ELSE null END) as withdraws,
 		count(case WHEN l3vpn_rib_log.iswithdrawn = false THEN 1 ELSE null END) as updates
 	FROM l3vpn_rib_log
 	WHERE timestamp >= time_bucket(int_window, now() - int_window)
 	  AND timestamp < time_bucket(int_window, now())
-	GROUP BY IntervalTime,peer_hash_id,prefix,prefix_len
-	ON CONFLICT (interval_time,peer_hash_id,prefix) DO UPDATE
+	GROUP BY IntervalTime,peer_hash_id,prefix,prefix_len,rd
+	ON CONFLICT (interval_time,peer_hash_id,prefix,rd) DO UPDATE
 		SET updates=excluded.updates, withdraws=excluded.withdraws;
 
 END;
