@@ -396,11 +396,9 @@ CREATE TABLE global_ip_rib (
 );
 CREATE INDEX ON global_ip_rib (recv_origin_as);
 CREATE INDEX ON global_ip_rib USING GIST (prefix inet_ops);
-CREATE INDEX ON global_ip_rib (iswithdrawn);
 CREATE INDEX ON global_ip_rib (rpki_origin_as);
 CREATE INDEX ON global_ip_rib (irr_origin_as);
-CREATE INDEX ON global_ip_rib (timestamp);
-CREATE INDEX ON global_ip_rib (timestamp,prefix);
+CREATE INDEX ON global_ip_rib (timestamp DESC);
 
 
 ALTER TABLE global_ip_rib SET (autovacuum_vacuum_cost_limit = 1000);
