@@ -11,6 +11,8 @@ import requests
 import json
 import time # time the sync
 import logging
+from random import randint
+
 
 # setup logging
 log_format = ('[%(asctime)s] %(levelname)-8s %(name)-12s %(message)s')
@@ -456,7 +458,15 @@ class apiDb:
 @click.option('-d', '--pgdatabase', 'pgdatabase', envvar='PGDATABASE',
               help="Postgres Database name",
               metavar="<string>", default="openbmp")
-def main(pghost, pguser, pgpassword, pgdatabase):
+@click.option('-s', '--sleep', 'sleep_secs',
+              help="Randomly sleep to delay connections to peeringdb (default 600)",
+              metavar="<int>", default="600")
+def main(pghost, pguser, pgpassword, pgdatabase, sleep_secs):
+
+    # Add a sleep before connecting to peeringDB
+    sleep_rand = randint(10, int(sleep_secs))
+    logger.info(f"Random sleep for {sleep_rand} seconds")
+    time.sleep(sleep_rand)
 
     pdb_api = apiDb(pghost, pguser, pgpassword, pgdatabase)   # PeeringDB API
 
