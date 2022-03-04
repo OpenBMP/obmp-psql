@@ -161,6 +161,20 @@ SELECT add_compression_policy('stats_ip_origins', INTERVAL '2 days');
 SELECT add_retention_policy('stats_ip_origins', INTERVAL '4 weeks');
 
 --
+-- Function to purge old withdrawn prefixes
+--
+CREATE OR REPLACE FUNCTION purge_global_ip_rib(
+	older_than_time interval DEFAULT '4 hours'
+)
+	RETURNS void AS $$
+BEGIN
+	-- delete old withdrawn prefixes that we don't want to track anymore
+	DELETE FROM global_ip_rib where iswithdrawn = true and timestamp < now () - older_than_time;
+
+END;
+$$ LANGUAGE plpgsql;
+
+--
 -- Function to update the global IP rib and the prefix counts by origin stats. This includes RPKI and IRR counts
 --      int_time                Interval/window time to check for changed RIB entries.
 --
@@ -168,34 +182,53 @@ CREATE OR REPLACE FUNCTION update_global_ip_rib(
 	int_time interval DEFAULT '15 minutes'
 )
 	RETURNS void AS $$
+DECLARE
+	execution_start timestamptz  := clock_timestamp();
+	insert_count    int;
 BEGIN
+	raise INFO 'Start time     : %', now();
+	raise INFO 'Interval Time  : %', int_time;
+	raise INFO '-> Inserting rows in global_ip_rib ...';
+
+	lock table global_ip_rib IN SHARE ROW EXCLUSIVE MODE;
 
 	-- Load changed prefixes only - First time will load every prefix. Expect in that case it'll take a little while.
 	INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,
-	                           iswithdrawn,timestamp,first_added_timestamp,num_peers)
-	SELECT r.prefix,r.prefix_len,r.origin_as,
-	       bool_and(r.iswithdrawn) as isWithdrawn,
-	       max(r.timestamp),min(r.first_added_timestamp),count(r.peer_hash_id)
-
-	FROM (
-		     SELECT prefix FROM ip_rib
-		     WHERE timestamp >= now() - int_time
-			   AND origin_as != 23456
-		     GROUP BY prefix
-	     ) c
-		     JOIN ip_rib r
-		          ON (r.prefix = c.prefix)
-	GROUP BY r.prefix,r.prefix_len,r.origin_as
+	                           iswithdrawn,timestamp,first_added_timestamp,num_peers,advertising_peers,withdrawn_peers)
+	SELECT r.prefix,
+	       max(r.prefix_len),
+	       r.origin_as,
+	       bool_and(r.iswithdrawn)                                             as isWithdrawn,
+	       max(r.timestamp),
+	       min(r.first_added_timestamp),
+	       count(distinct r.peer_hash_id)                                      as total_peers,
+	       count(distinct r.peer_hash_id) FILTER (WHERE r.iswithdrawn = False) as advertising_peers,
+	       count(distinct r.peer_hash_id) FILTER (WHERE r.iswithdrawn = True)  as withdrawn_peers
+	FROM ip_rib r
+	WHERE prefix in (
+		SELECT prefix
+		FROM ip_rib_log
+		WHERE
+			timestamp >= now() - int_time AND
+			origin_as != 23456
+		GROUP BY prefix
+	)
+	GROUP BY r.prefix, r.origin_as
 	ON CONFLICT (prefix,recv_origin_as)
 		DO UPDATE SET timestamp=excluded.timestamp,
 		              first_added_timestamp=excluded.timestamp,
 		              iswithdrawn=excluded.iswithdrawn,
-		              num_peers=excluded.num_peers;
+		              num_peers=excluded.num_peers,
+		              advertising_peers=excluded.advertising_peers,
+		              withdrawn_peers=excluded.withdrawn_peers;
 
-	-- delete old withdrawn prefixes that we don't want to track anymore
-	DELETE FROM global_ip_rib where iswithdrawn = true and timestamp < now () - interval '8 hours';
+	GET DIAGNOSTICS insert_count = row_count;
+	raise INFO 'Rows updated   : %', insert_count;
+	raise INFO 'Execution time : %', clock_timestamp() - execution_start;
+	raise INFO 'Completion time: %', now();
 
 	-- Update IRR
+	raise INFO '-> Updating IRR info';
 	UPDATE global_ip_rib r SET
 		                        irr_origin_as=i.origin_as,
 		                       irr_source=i.source,
@@ -203,10 +236,11 @@ BEGIN
 	FROM info_route i
 	WHERE  r.timestamp >= now() - (int_time * 3) and i.prefix = r.prefix;
 
-	-- Update RPKI entries - Limit query to only update what has changed in the last 1 hour
+	-- Update RPKI entries - Limit query to only update what has changed in interval time
 	--    NOTE: The global_ip_rib table should have current times when first run (new table).
 	--          This will result in this query taking a while. After first run, it shouldn't take
 	--          as long.
+	raise INFO '-> Updating RPKI info';
 	UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
 	FROM rpki_validator p
 	WHERE r.timestamp >= now() - (int_time * 3)

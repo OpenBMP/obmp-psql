@@ -305,6 +305,8 @@ CREATE INDEX ON base_attrs USING GIN  (large_community_list array_ops);
 CREATE INDEX ON base_attrs USING HASH  (peer_hash_id);
 CREATE INDEX ON base_attrs (peer_hash_id, hash_id);
 
+ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_limit = 1000);
+ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_delay = 5);
 
 -- Table structure for table rib
 --    https://blog.dbi-services.com/hash-partitioning-in-postgresql-11/--
@@ -329,7 +331,7 @@ CREATE TABLE ip_rib (
 );
 
 CREATE INDEX ON ip_rib USING HASH (hash_id);
-CREATE INDEX ON ip_rib (timestamp);
+CREATE INDEX ON ip_rib (timestamp DESC);
 --CREATE INDEX ON ip_rib USING HASH (peer_hash_id);
 -- Brin apparently requires a lot of memory and changes psql to prefer this index
 -- CREATE INDEX ON ip_rib using brin (peer_hash_id,timestamp);
@@ -389,6 +391,8 @@ CREATE TABLE global_ip_rib (
     irr_source              varchar(32),
     irr_descr               varchar(255),
     num_peers               int                 DEFAULT 0,
+    advertising_peers       int                 DEFAULT 0,
+    withdrawn_peers         int                 DEFAULT 0,
     timestamp               timestamp           without time zone default (now() at time zone 'utc') NOT NULL,
     first_added_timestamp   timestamp(6)        without time zone default (now() at time zone 'utc') NOT NULL,
 
@@ -399,6 +403,7 @@ CREATE INDEX ON global_ip_rib USING GIST (prefix inet_ops);
 CREATE INDEX ON global_ip_rib (rpki_origin_as);
 CREATE INDEX ON global_ip_rib (irr_origin_as);
 CREATE INDEX ON global_ip_rib (timestamp DESC);
+CREATE INDEX ON global_ip_rib (iswithdrawn,timestamp DESC);
 
 
 ALTER TABLE global_ip_rib SET (autovacuum_vacuum_cost_limit = 1000);
