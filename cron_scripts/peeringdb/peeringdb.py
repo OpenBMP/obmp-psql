@@ -289,7 +289,7 @@ class apiDb:
                 logger.debug(f"Skipping non operational: {entry}")
                 continue
 
-            ix_name = entry['name']
+            ix_name = entry['name'].replace("'", "''")
             ix_id = entry['ix_id']
             peer_ipv4 = f"'{entry['ipaddr4']}'" if entry['ipaddr4'] else "'0.0.0.0'"
             peer_ipv6 = f"'{entry['ipaddr6']}'" if entry['ipaddr6'] else "'::'"
