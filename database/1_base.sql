@@ -360,6 +360,12 @@ CREATE INDEX ON ip_rib_log (peer_hash_id);
 CREATE INDEX ON ip_rib_log (base_attr_hash_id);
 CREATE INDEX ON ip_rib_log (peer_hash_id,base_attr_hash_id);
 
+-- convert to timescaledb
+SELECT create_hypertable('ip_rib_log', 'timestamp', chunk_time_interval => interval '1 hours');
+
+SELECT add_retention_policy('ip_rib_log', INTERVAL '3 months');
+
+
 ALTER TABLE ip_rib_log SET (
 	timescaledb.compress,
 	timescaledb.compress_segmentby = 'peer_hash_id,prefix,origin_as'
@@ -374,10 +380,6 @@ SELECT add_compression_policy('ip_rib_log', INTERVAL '2 days');
 
 
 
--- convert to timescaledb
-SELECT create_hypertable('ip_rib_log', 'timestamp', chunk_time_interval => interval '1 hours');
-
-SELECT add_retention_policy('ip_rib_log', INTERVAL '3 months');
 
 -- Table structure for global ip rib
 DROP TABLE IF EXISTS global_ip_rib CASCADE;

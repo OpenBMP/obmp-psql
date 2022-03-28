@@ -187,12 +187,27 @@ public class ConsumerRunnable implements Runnable {
         // Drain message queue
         logger.info("draining message queue %d", message_queue.size());
         int i = 0;
-        while (message_queue.size() > 0) {
+        int prev_queue_size = message_queue.size();
+        int stalled_queue_check_count = 0;
+        while (message_queue.size() > 0 && stalled_queue_check_count < 500) {
+
+            if (prev_queue_size != message_queue.size()) {
+                stalled_queue_check_count = 0;
+            } else {
+                stalled_queue_check_count++;
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+            }
+            prev_queue_size = message_queue.size();
             writePendingMessages();
 
             if (i > 100) {
                 i = 0;
-                logger.info("    ... still draining message queue %d", message_queue.size());
+                logger.info("still draining message queue %d, stuck count %d",
+                        message_queue.size(), stalled_queue_check_count);
             }
 
             i++;
