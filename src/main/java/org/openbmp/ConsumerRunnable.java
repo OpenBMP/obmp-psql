@@ -635,7 +635,7 @@ public class ConsumerRunnable implements Runnable {
         while (writer.writerQueue.size() > 0) {
             if (i >= 5000) {
                 i = 0;
-                consumer.poll(0);           // NOTE: consumer is paused already.
+                consumer.poll(Duration.ZERO);           // NOTE: consumer is paused already.
 
                 logger.info("    ... drain queue writer size is " + writer.writerQueue.size());
             }
