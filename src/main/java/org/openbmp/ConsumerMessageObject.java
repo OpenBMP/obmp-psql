@@ -11,6 +11,6 @@ import java.util.Map;
  */
 public class ConsumerMessageObject {
     public String key;
-    public Map<String, String> query;
+    public WriterQueueMsg writer_msg;
     public ConsumerRunnable.ThreadType thread_type;
 }

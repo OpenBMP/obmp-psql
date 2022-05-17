@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2020 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
+
 package org.openbmp.psqlquery;
 
 import org.openbmp.api.helpers.IpAddr;
 import org.openbmp.api.parsed.message.LsPrefixPojo;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class LsPrefixQuery extends Query {
@@ -23,13 +21,6 @@ public class LsPrefixQuery extends Query {
     }
 
 
-    /**
-     * Generate insert/update statement, sans the values
-     *
-     * @return Two strings are returned
-     *      0 = Insert statement string up to VALUES keyword
-     *      1 = ON DUPLICATE KEY UPDATE ...  or empty if not used.
-     */
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO ls_prefixes " +
                                 "(hash_id,peer_hash_id,base_attr_hash_id,seq,local_node_hash_id," +
@@ -37,13 +28,14 @@ public class LsPrefixQuery extends Query {
                                 "igp_flags,isIPv4,route_tag,ext_route_tag,metric,ospf_fwd_addr,sr_prefix_sids," +
                                 "isWithdrawn,timestamp)" +
 
-                    " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
-
-                    ") t(hash_id,peer_hash_id,base_attr_hash_id,seq,local_node_hash_id," +
-                         "mt_id,protocol,prefix,prefix_len,ospf_route_type," +
-                         "igp_flags,isIPv4,route_tag,ext_route_tag,metric,ospf_fwd_addr,sr_prefix_sids" +
-                         "isWithdrawn,timestamp)" +
-                    " ORDER BY hash_id,peer_hash_id,timestamp desc" +
+                    " VALUES ",
+//                    " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
+//
+//                    ") t(hash_id,peer_hash_id,base_attr_hash_id,seq,local_node_hash_id," +
+//                         "mt_id,protocol,prefix,prefix_len,ospf_route_type," +
+//                         "igp_flags,isIPv4,route_tag,ext_route_tag,metric,ospf_fwd_addr,sr_prefix_sids" +
+//                         "isWithdrawn,timestamp)" +
+//                    " ORDER BY hash_id,peer_hash_id,timestamp desc" +
                         " ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,seq=excluded.seq," +
                             "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                             "igp_flags=CASE excluded.isWithdrawn WHEN true THEN ls_prefixes.igp_flags ELSE excluded.igp_flags END," +
@@ -58,21 +50,11 @@ public class LsPrefixQuery extends Query {
         return stmt;
     }
 
-    /**
-     * Generate bulk values statement for SQL bulk insert.
-     *
-     * @return String in the format of (col1, col2, ...)[,...]
-     */
-    public String genValuesStatement() {
-        StringBuilder sb = new StringBuilder();
+    public Map<String, String> genValuesStatement() {
+        Map<String, String> values = new HashMap<>();
 
-        int i = 0;
         for (LsPrefixPojo pojo: records) {
-
-            if (i > 0)
-                sb.append(',');
-
-            i++;
+            StringBuilder sb = new StringBuilder();
 
             sb.append("('");
             sb.append(pojo.getHash()); sb.append("'::uuid,");
@@ -109,9 +91,11 @@ public class LsPrefixQuery extends Query {
             sb.append(pojo.getWithdrawn()); sb.append(',');
             sb.append('\''); sb.append(pojo.getTimestamp()); sb.append("'::timestamp");
             sb.append(')');
+
+            values.put(pojo.getHash(), sb.toString());
         }
 
-        return sb.toString();
+        return values;
     }
 
 }

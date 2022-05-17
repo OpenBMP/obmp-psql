@@ -5,6 +5,8 @@ base:
   # Interval at which the customer statistics should be printed/logged
   stats_interval: 60
 
+  # Number of consumer threads
+  consumer_threads: 3
 
   # In minutes; The maximum age between received collector heartbeats.
   #     The collector sends heatbeat messages every interval.  This

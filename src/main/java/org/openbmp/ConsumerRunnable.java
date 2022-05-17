@@ -1,11 +1,5 @@
 /*
- * Copyright (c) 2018 Cisco Systems, Inc. and others.  All rights reserved.
- * Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
 package org.openbmp;
 
@@ -36,6 +30,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Pattern;
 
+import static org.openbmp.psqlquery.PsqlFunctions.create_sql_string;
+
 /**
  * Consumer class
  *
@@ -44,8 +40,8 @@ import java.util.regex.Pattern;
 public class ConsumerRunnable implements Runnable {
 
     public enum ThreadType {
-        THREAD_DEFAULT(0),
-        THREAD_ATTRIBUTES(1);
+        THREAD_DEFAULT(0);
+        //THREAD_ATTRIBUTES(1);
 
         private final int value;
 
@@ -76,6 +72,8 @@ public class ConsumerRunnable implements Runnable {
     private boolean topics_all_subscribed;
     private List<Pattern> topic_patterns;
     private StringBuilder topic_regex_pattern;
+
+    private Set<String> processed_attr;
 
     private BigInteger messageCount;
     private long collector_msg_count;
@@ -125,6 +123,8 @@ public class ConsumerRunnable implements Runnable {
         message_queue = new LinkedBlockingQueue<>(cfg.getConsumer_queue_size());
         writer_thread_map = new HashMap<>();
         last_writer_thread_chg_time = 0L;
+
+        processed_attr = new HashSet<>();
 
         messageCount = BigInteger.valueOf(0);
         this.cfg = cfg;
@@ -392,18 +392,11 @@ public class ConsumerRunnable implements Runnable {
 
                         Collector collector = new Collector(message.getContent());
                         CollectorQuery collectorQuery = new CollectorQuery(collector.records);
-                        dbQuery = collectorQuery;
 
                         last_collector_msg_time = System.currentTimeMillis();
 
                         if (collectorQuery != null) {
-                            StringBuilder queryStr = new StringBuilder();
-                            String[] insertStmt = collectorQuery.genInsertStatement();
-                            queryStr.append(insertStmt[0]);         // insert ... values
-                            queryStr.append(collectorQuery.genValuesStatement());
-                            queryStr.append(insertStmt[1]);         // after values
-
-                            db.updateQuery(queryStr.toString(), cfg.getDb_retries());
+                            db.updateQuery(create_sql_string(collectorQuery), cfg.getDb_retries());
 
                             String sql = collectorQuery.genRouterCollectorUpdate();
 
@@ -429,18 +422,11 @@ public class ConsumerRunnable implements Runnable {
 
                         Router router = new Router(message.getContent());
                         RouterQuery routerQuery = new RouterQuery(message.getCollector_hash_id(), router.records);
-                        dbQuery = routerQuery;
 
                         if (routerQuery != null) {
                             // Add/update routers
-                            StringBuilder queryStr = new StringBuilder();
-                            String[] insertStmt = routerQuery.genInsertStatement();
 
-                            queryStr.append(insertStmt[0]); // insert up to values
-                            queryStr.append(routerQuery.genValuesStatement());
-                            queryStr.append(insertStmt[1]); // on conflict/ending
-
-                            db.updateQuery(queryStr.toString(), cfg.getDb_retries());
+                            db.updateQuery(create_sql_string(routerQuery), cfg.getDb_retries());
 
                             consumer.poll(Duration.ZERO);       // heartbeat
 
@@ -468,19 +454,11 @@ public class ConsumerRunnable implements Runnable {
 
                         Peer peer = new org.openbmp.api.parsed.processor.Peer(message.getContent());
                         PeerQuery peerQuery = new PeerQuery(peer.records);
-                        dbQuery = peerQuery;
 
                         if (peerQuery != null) {
 
                             // Add/update peers
-                            StringBuilder queryStr = new StringBuilder();
-                            String[] insertStmt = peerQuery.genInsertStatement();
-
-                            queryStr.append(insertStmt[0]); // insert up to values
-                            queryStr.append(peerQuery.genValuesStatement());
-                            queryStr.append(insertStmt[1]); // on conflict/ending
-
-                            db.updateQuery(queryStr.toString(), cfg.getDb_retries());
+                            db.updateQuery(create_sql_string(peerQuery), cfg.getDb_retries());
 
                             consumer.poll(Duration.ofMillis(0));       // heartbeat
 
@@ -501,10 +479,25 @@ public class ConsumerRunnable implements Runnable {
                         logger.trace("Parsing base_attribute message");
                         base_attribute_msg_count++;
 
-                        thread_type = ThreadType.THREAD_ATTRIBUTES;
+                        //thread_type = ThreadType.THREAD_ATTRIBUTES;
 
-                        BaseAttribute ba = new org.openbmp.api.parsed.processor.BaseAttribute(message.getContent());
-                        dbQuery = new BaseAttributeQuery(ba.records);
+                        List<BaseAttributePojo> ba_list = new ArrayList();
+                        BaseAttribute ba_temp = new org.openbmp.api.parsed.processor.BaseAttribute(message.getContent());
+
+                        // Cache in memory processed base attributes.  If processed, skip adding it to the DB again
+                        for (BaseAttributePojo ba_entry : ba_temp.records) {
+                            if (processed_attr.contains(ba_entry.getHash())) {
+                                continue;
+                            } else {
+                                processed_attr.add(ba_entry.getHash());
+                                ba_list.add(ba_entry);
+                            }
+                        }
+
+                        if (ba_list.size() <= 0)
+                            continue;
+
+                        dbQuery = new BaseAttributeQuery(ba_list);
 
                     } else if ((message.getType() != null && message.getType().equalsIgnoreCase("unicast_prefix"))
                             || record.topic().equals("openbmp.parsed.unicast_prefix")) {
@@ -955,7 +948,7 @@ public class ConsumerRunnable implements Runnable {
                 }
 
                 // Try to send to writer
-                else if ((wobj.writerQueue.offer(qmsg.query)) == false) {
+                else if ((wobj.writerQueue.offer(qmsg.writer_msg)) == false) {
 
                     // failed, so mark this thread as busy
                     message_queue.offer(qmsg);
@@ -999,29 +992,29 @@ public class ConsumerRunnable implements Runnable {
      *
      * \details This method will add the bulk object to the writer.
      *
-     * @param key           Message key in kafka, such as the hash id
+     * @param key           Message key in kafka, such as the peer hash id
      * @param statement     String array statement from Query.getInsertStatement()
      * @param values        Values string from Query.getValuesStatement()
      * @param thread_type   Type of thread to use
      */
-    private void addBulkQuerytoWriter(String key, String [] statement, String values, ThreadType thread_type) {
+    private void addBulkQuerytoWriter(String key, String [] statement, Map<String,String> values, ThreadType thread_type) {
         Map<String, String> query = new HashMap<>();
 
         try {
-            if (values.length() > 0) {
-                // Add statement and value to query map
-                query.put("prefix", statement[0]);
-                query.put("suffix", statement[1]);
-                query.put("value", values);
+            if (values.size() > 0) {
+                WriterQueueMsg wmsg = new WriterQueueMsg();
+
+                wmsg.prefix = statement[0];
+                wmsg.suffix = statement[1];
+                wmsg.values = values;
 
                 // block if space is not available
                 ConsumerMessageObject msg = new ConsumerMessageObject();
                 msg.key = key;
-                msg.query = query;
+                msg.writer_msg = wmsg;
                 msg.thread_type = thread_type;
 
-
-                addToMsgQueue(msg);
+              addToMsgQueue(msg);
             }
         } catch (Exception ex) {
             logger.info("Get values Exception: ", ex);

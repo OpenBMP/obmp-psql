@@ -178,16 +178,19 @@ $$ LANGUAGE plpgsql;
 -- Function to update the global IP rib and the prefix counts by origin stats. This includes RPKI and IRR counts
 --      int_time                Interval/window time to check for changed RIB entries.
 --
-CREATE OR REPLACE FUNCTION update_global_ip_rib(
-	int_time interval DEFAULT '15 minutes'
-)
+CREATE OR REPLACE FUNCTION update_global_ip_rib()
 	RETURNS void AS $$
 DECLARE
 	execution_start timestamptz  := clock_timestamp();
 	insert_count    int;
+    start_time timestamptz := now();
 BEGIN
-	raise INFO 'Start time     : %', now();
-	raise INFO 'Interval Time  : %', int_time;
+
+    select time_bucket('5 minutes', timestamp - interval '5 minute') INTO start_time
+        FROM global_ip_rib order by timestamp desc limit 1;
+
+	raise INFO 'Start time       : %', execution_start;
+	raise INFO 'Last Query Time  : %', start_time;
 	raise INFO '-> Inserting rows in global_ip_rib ...';
 
 	lock table global_ip_rib IN SHARE ROW EXCLUSIVE MODE;
@@ -207,16 +210,16 @@ BEGIN
 	FROM ip_rib r
 	WHERE prefix in (
 		SELECT prefix
-		FROM ip_rib_log
+		FROM ip_rib
 		WHERE
-			timestamp >= now() - int_time AND
+			timestamp >= start_time AND
 			origin_as != 23456
 		GROUP BY prefix
 	)
 	GROUP BY r.prefix, r.origin_as
 	ON CONFLICT (prefix,recv_origin_as)
 		DO UPDATE SET timestamp=excluded.timestamp,
-		              first_added_timestamp=excluded.timestamp,
+		              first_added_timestamp=excluded.first_added_timestamp,
 		              iswithdrawn=excluded.iswithdrawn,
 		              num_peers=excluded.num_peers,
 		              advertising_peers=excluded.advertising_peers,
@@ -224,38 +227,42 @@ BEGIN
 
 	GET DIAGNOSTICS insert_count = row_count;
 	raise INFO 'Rows updated   : %', insert_count;
-	raise INFO 'Execution time : %', clock_timestamp() - execution_start;
-	raise INFO 'Completion time: %', now();
+	raise INFO 'Duration       : %', clock_timestamp() - execution_start;
+	raise INFO 'Completion time: %', clock_timestamp();
 
 	-- Update IRR
 	raise INFO '-> Updating IRR info';
 	UPDATE global_ip_rib r SET
-		                        irr_origin_as=i.origin_as,
+		                       irr_origin_as=i.origin_as,
 		                       irr_source=i.source,
 		                       irr_descr=i.descr
 	FROM info_route i
-	WHERE  r.timestamp >= now() - (int_time * 3) and i.prefix = r.prefix;
+	WHERE  r.timestamp >= start_time and i.prefix = r.prefix;
 
-	-- Update RPKI entries - Limit query to only update what has changed in interval time
+    GET DIAGNOSTICS insert_count = row_count;
+    raise INFO 'Rows updated   : %', insert_count;
+    raise INFO 'Duration       : %', clock_timestamp() - execution_start;
+    raise INFO 'Completion time: %', clock_timestamp();
+
+
+    -- Update RPKI entries - Limit query to only update what has changed in interval time
 	--    NOTE: The global_ip_rib table should have current times when first run (new table).
 	--          This will result in this query taking a while. After first run, it shouldn't take
 	--          as long.
 	raise INFO '-> Updating RPKI info';
 	UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
 	FROM rpki_validator p
-	WHERE r.timestamp >= now() - (int_time * 3)
+	WHERE r.timestamp >= start_time
 	  AND p.prefix >>= r.prefix
 	  AND r.prefix_len >= p.prefix_len
 	  AND r.prefix_len <= p.prefix_len_max;
 
-	-- Update again with exact match if possible
--- 	UPDATE global_ip_rib r SET rpki_origin_as=p.origin_as
--- 	FROM rpki_validator p
--- 	WHERE r.timestamp >= now() - (int_time * 3)
--- 	  AND p.prefix >>= r.prefix
--- 	  AND r.prefix_len >= p.prefix_len
--- 	  AND r.prefix_len <= p.prefix_len_max
--- 	  AND r.recv_origin_as = p.origin_as;
+    GET DIAGNOSTICS insert_count = row_count;
+    raise INFO 'Rows updated   : %', insert_count;
+    raise INFO 'Duration       : %', clock_timestamp() - execution_start;
+
+
+    raise INFO 'Completion time: %', clock_timestamp();
 
 END;
 $$ LANGUAGE plpgsql;

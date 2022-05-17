@@ -1,6 +1,6 @@
 package org.openbmp.psqlquery;
 /*
- * Copyright (c) 2020 Cisco Systems, Inc. and others.  All rights reserved. *
+ * Copyright (c) 2020-2022 Cisco Systems, Inc. and others.  All rights reserved. *
  */
 
 
@@ -10,6 +10,29 @@ import java.util.List;
  * Various functions to generate inserts/queries/etc for PSQL
  */
 public class PsqlFunctions {
+
+    public static String create_sql_string(Query query) {
+
+        StringBuilder queryStr = new StringBuilder();
+
+        String[] insertStmt = query.genInsertStatement();
+        queryStr.append(insertStmt[0]);         // insert ... values
+
+        boolean add_comma = false;
+        for (String value: query.genValuesStatement().values()) {
+            if (add_comma)
+                queryStr.append(',');
+            else
+                add_comma = true;
+            queryStr.append(value);
+
+        }
+
+        queryStr.append(insertStmt[1]);         // after values
+
+        return queryStr.toString();
+    }
+
     /**
      * Get PSQL values string from list of values
      *

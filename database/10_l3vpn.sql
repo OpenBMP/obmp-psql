@@ -67,7 +67,7 @@ CREATE INDEX ON l3vpn_rib_log (peer_hash_id,base_attr_hash_id);
 -- SELECT add_compression_policy('l3vpn_rib_log', INTERVAL '2 days');
 
 SELECT create_hypertable('l3vpn_rib_log', 'timestamp', chunk_time_interval => interval '1 hours');
-SELECT add_retention_policy('l3vpn_rib_log', INTERVAL '3 months');
+SELECT add_retention_policy('l3vpn_rib_log', INTERVAL '2 months');
 
 
 --

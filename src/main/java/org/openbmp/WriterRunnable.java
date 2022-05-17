@@ -10,7 +10,6 @@
 package org.openbmp;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +28,7 @@ public class WriterRunnable implements  Runnable {
 
     private PSQLHandler db;                                     // DB handler
     private Config cfg;
-    private BlockingQueue<Map<String, String>> writerQueue;     // Reference to the writer FIFO queue
+    private BlockingQueue<WriterQueueMsg> writerQueue;          // Reference to the writer FIFO queue
     private boolean run;
 
     /**
@@ -75,7 +74,7 @@ public class WriterRunnable implements  Runnable {
          * bulk query map has a key of : <prefix|suffix>
          *      Prefix and suffix are from the query FIFO message.  Value is the VALUE to be inserted/updated/deleted
          */
-        Map<String, LinkedList<String>> bulk_query = new LinkedHashMap<>();
+        Map<String, Map<String, String>> bulk_query = new LinkedHashMap<>();
 
         try {
             while (run) {
@@ -91,26 +90,26 @@ public class WriterRunnable implements  Runnable {
                         logger.trace("Max reached, doing insert: wait_ms=%d bulk_count=%d",
                                     cur_time - prev_time, bulk_count);
 
-                        StringBuilder query = new StringBuilder();
 
-                        // Loop through queries and add as unique values to map, replacing duplicate (state compression)
-                        for (Map.Entry<String, LinkedList<String>> entry : bulk_query.entrySet()) {
-                            String key = entry.getKey().toString();
+                        // Loop through queries and add as unique values to map
+                        for (Map.Entry<String, Map<String, String>> entry : bulk_query.entrySet()) {
+                            StringBuilder query = new StringBuilder();
+
+                            String key = entry.getKey();
 
                             String[] ins = key.split("[|]");
                             query.append(ins[0]);       // Insert statement
 
-                            boolean first = true;
-                            for (String value : entry.getValue()) {
+                            boolean add_comma = false;
+                            for (String value : entry.getValue().values()) {
 
-                                if (first) {
-                                    first = false;
-                                } else {
+                                if (add_comma) {
                                     query.append(',');
+                                } else {
+                                    add_comma = true;
                                 }
 
                                 query.append(value);
-
                             }
 
                             // Ending suffix statement, such as on conflict
@@ -118,10 +117,6 @@ public class WriterRunnable implements  Runnable {
                                 query.append(ins[1]);
 
                             query.append(';');
-
-                        }
-
-                        if (query.length() > 0) {
                             db.updateQuery(query.toString(), cfg.getDb_retries());
                         }
 
@@ -133,32 +128,50 @@ public class WriterRunnable implements  Runnable {
                 }
 
                 // Get next query from queue
-                Map<String, String> cur_query = writerQueue.poll(cfg.getDb_batch_time_millis(), TimeUnit.MILLISECONDS);
+                WriterQueueMsg wmsg = writerQueue.poll(cfg.getDb_batch_time_millis(), TimeUnit.MILLISECONDS);
 
-                if (cur_query != null) {
-                    if (cur_query.containsKey("prefix")) {
-                        String key = cur_query.get("prefix") + "|" + cur_query.get("suffix");
-                        ++bulk_count;
+                if (wmsg != null && wmsg.prefix != null && wmsg != null && wmsg.values.size() > 0) {
+                    if (wmsg.bulk_ok) {
+
+                        // First map key is the key for the bulk query statement
+                        String key = wmsg.prefix + "|" + wmsg.suffix;
 
                         // merge the data to existing bulk map if already present
                         if (bulk_query.containsKey(key)) {
-                            bulk_query.get(key).add(cur_query.get("value"));
-                            //bulk_query.put(key, bulk_query.get(key).concat("," + cur_query.get("value")));
-                        } else {
-                            LinkedList<String> value = new LinkedList<>();
-                            value.add(cur_query.get("value"));
-                            bulk_query.put(key, value);
-                        }
+                            Map<String, String> query_entry = bulk_query.get(key);
 
-                        if (cur_query.get("value").length() > 100000) {
-                            bulk_count = cfg.getDb_batch_records();
-                            logger.debug("value length is: %d", cur_query.get("value").length());
+                            // Below will state compress records based on the value hash_id/key.  The last entry
+                            //   will be the final one that gets added to postgres.  State compression will only happen
+                            //   for same hash_id in the batch_time_millis timeframe. This is normally 500ms or less.
+                            for (Map.Entry<String, String> value: wmsg.values.entrySet()) {
+                                query_entry.put(value.getKey(), value.getValue());
+                                ++bulk_count;
+                            }
+                        } else { // Add new statement/query to bulk map
+                            bulk_query.put(key, wmsg.values);
+                            bulk_count += wmsg.values.size();
                         }
                     }
-                    else if (cur_query.containsKey("query")) {  // Null prefix means run query now, not in bulk
+                    else {  // Do not bulk/batch this query, run it now
                         logger.debug("Non bulk query");
 
-                        db.updateQuery(cur_query.get("query"), 3);
+                        StringBuilder queryStr = new StringBuilder();
+                        queryStr.append(wmsg.prefix);
+
+                        boolean add_comma = false;
+                        for (String value: wmsg.values.values()) {
+                            if (add_comma) {
+                                queryStr.append(',');
+                            } else {
+                                add_comma = true;
+                            }
+
+                            queryStr.append(value);
+                        }
+
+                        queryStr.append(wmsg.suffix);
+
+                        db.updateQuery(queryStr.toString(), 3);
                     }
                 }
             }

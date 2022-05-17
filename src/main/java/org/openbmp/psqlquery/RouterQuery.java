@@ -1,14 +1,10 @@
 /*
- * Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
 package org.openbmp.psqlquery;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,14 +23,7 @@ public class RouterQuery extends Query{
         this.records = records;
         this.collector_hash = collector_hash;
 	}
-	
-    /**
-     * Generate MySQL insert/update statement, sans the values
-     *
-     * @return Two strings are returned
-     *      0 = Insert statement string up to VALUES keyword
-     *      1 = ON DUPLICATE KEY UPDATE ...  or empty if not used.
-     */
+
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO routers (hash_id,name,ip_address,timestamp,state,term_reason_code," +
                                   "term_reason_text,term_data,init_data,description,collector_hash_id,bgp_id) " +
@@ -50,22 +39,11 @@ public class RouterQuery extends Query{
         return stmt;
     }
 
-    /**
-     * Generate bulk values statement for SQL bulk insert.
-     *
-     * @return String in the format of (col1, col2, ...)[,...]
-     */
-    public String genValuesStatement() {
-    	
-    	//DefaultColumnValues.getDefaultValue("hash");
-        StringBuilder sb = new StringBuilder();
+    public Map<String, String> genValuesStatement() {
+        Map<String, String> values = new HashMap<>();
 
-        int i = 0;
         for (RouterPojo pojo : records) {
-            if (i > 0)
-                sb.append(',');
-
-            i++;
+            StringBuilder sb = new StringBuilder();
 
             sb.append('(');
 
@@ -92,9 +70,11 @@ public class RouterQuery extends Query{
             }
 
             sb.append(')');
+
+            values.put(pojo.getHash(), sb.toString());
         }
 
-        return sb.toString();
+        return values;
     }
 
     

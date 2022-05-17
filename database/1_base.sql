@@ -292,8 +292,8 @@ CREATE TABLE base_attrs (
     nexthop_isIPv4          boolean             DEFAULT true,
     timestamp               timestamp(6)        without time zone default (now() at time zone 'utc') NOT NULL,
     originator_id           inet,
-    PRIMARY KEY (hash_id)
-);
+    PRIMARY KEY (peer_hash_id,hash_id)
+) PARTITION BY HASH (peer_hash_id);;
 
 --CREATE UNIQUE INDEX ON base_attrs USING BTREE  (timestamp,hash_id);
 --CREATE INDEX ON base_attrs (origin_as);
@@ -302,11 +302,165 @@ CREATE INDEX ON base_attrs USING GIN  (as_path array_ops);
 CREATE INDEX ON base_attrs USING GIN  (community_list array_ops);
 CREATE INDEX ON base_attrs USING GIN  (ext_community_list array_ops);
 CREATE INDEX ON base_attrs USING GIN  (large_community_list array_ops);
-CREATE INDEX ON base_attrs USING HASH  (peer_hash_id);
-CREATE INDEX ON base_attrs (peer_hash_id, hash_id);
+--CREATE INDEX ON base_attrs USING HASH  (peer_hash_id);
+CREATE INDEX ON base_attrs (hash_id);
 
-ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_limit = 1000);
-ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_delay = 5);
+-- ALTER TABLE base_attrs SET (autovacuum_analyze_threshold = 50);
+-- ALTER TABLE base_attrs SET (autovacuum_vacuum_threshold = 50);
+-- ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_limit = 1000);
+-- ALTER TABLE base_attrs SET (autovacuum_vacuum_cost_delay = 5);
+
+CREATE TABLE base_attrs_p1 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 0)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p2 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 1)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p3 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 2)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p4 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 3)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p5 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 4)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p6 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 5)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p7 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 6)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p8 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 7)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p9 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 8)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p10 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 9)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p11 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 10)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p12 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 11)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p13 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 12)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p14 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 13)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p15 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 14)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p16 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 15)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p17 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 16)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p18 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 17)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p19 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 18)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p20 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 19)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p21 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 20)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p22 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 21)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p23 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 22)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p24 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 23)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p25 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 24)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p26 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 25)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p27 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 26)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p28 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 27)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p29 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 28)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p30 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 29)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p31 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 30)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p32 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 31)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p33 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 32)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p34 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 33)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p35 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 34)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p36 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 35)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p37 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 36)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p38 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 37)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p39 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 38)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p40 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 39)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p41 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 40)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p42 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 41)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p43 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 42)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p44 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 43)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p45 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 44)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p46 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 45)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p47 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 46)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p48 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 47)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p49 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 48)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE base_attrs_p50 PARTITION OF base_attrs
+	FOR VALUES WITH (modulus 50, remainder 49)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+
 
 -- Table structure for table rib
 --    https://blog.dbi-services.com/hash-partitioning-in-postgresql-11/--
@@ -328,7 +482,7 @@ CREATE TABLE ip_rib (
     isPrePolicy             boolean             NOT NULL DEFAULT true,
     isAdjRibIn              boolean             NOT NULL DEFAULT true,
     PRIMARY KEY (peer_hash_id, hash_id)
-);
+) PARTITION BY HASH (peer_hash_id);
 
 CREATE INDEX ON ip_rib USING HASH (hash_id);
 CREATE INDEX ON ip_rib (timestamp DESC);
@@ -339,6 +493,157 @@ CREATE INDEX ON ip_rib USING HASH (base_attr_hash_id);
 CREATE INDEX ON ip_rib USING GIST (prefix inet_ops);
 CREATE INDEX ON ip_rib (origin_as);
 CREATE INDEX ON ip_rib (peer_hash_id,origin_as);
+
+CREATE TABLE ip_rib_p1 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 0)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p2 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 1)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p3 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 2)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p4 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 3)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p5 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 4)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p6 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 5)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p7 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 6)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p8 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 7)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p9 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 8)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p10 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 9)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p11 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 10)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p12 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 11)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p13 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 12)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p14 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 13)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p15 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 14)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p16 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 15)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p17 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 16)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p18 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 17)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p19 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 18)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p20 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 19)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p21 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 20)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p22 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 21)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p23 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 22)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p24 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 23)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p25 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 24)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p26 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 25)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p27 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 26)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p28 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 27)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p29 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 28)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p30 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 29)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p31 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 30)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p32 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 31)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p33 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 32)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p34 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 33)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p35 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 34)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p36 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 35)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p37 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 36)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p38 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 37)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p39 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 38)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p40 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 39)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p41 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 40)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p42 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 41)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p43 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 42)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p44 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 43)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p45 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 44)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p46 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 45)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p47 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 46)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p48 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 47)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p49 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 48)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
+CREATE TABLE ip_rib_p50 PARTITION OF ip_rib
+	FOR VALUES WITH (modulus 50, remainder 49)
+	WITH (autovacuum_vacuum_cost_limit = 1000, autovacuum_vacuum_cost_delay = 5);
 
 
 -- Table structure for table ip_rib_log
@@ -363,7 +668,7 @@ CREATE INDEX ON ip_rib_log (peer_hash_id,base_attr_hash_id);
 -- convert to timescaledb
 SELECT create_hypertable('ip_rib_log', 'timestamp', chunk_time_interval => interval '1 hours');
 
-SELECT add_retention_policy('ip_rib_log', INTERVAL '3 months');
+SELECT add_retention_policy('ip_rib_log', INTERVAL '2 months');
 
 
 ALTER TABLE ip_rib_log SET (
@@ -444,10 +749,11 @@ CREATE TABLE info_route (
     origin_as               bigint              NOT NULL,
     source                  varchar(32)         NOT NULL,
     timestamp               timestamp           without time zone default (now() at time zone 'utc') NOT NULL,
-    PRIMARY KEY (prefix,prefix_len,origin_as)
+    PRIMARY KEY (prefix,origin_as)
 );
 CREATE INDEX ON info_route (origin_as);
 CREATE INDEX ON info_route USING GIST (prefix inet_ops);
+CREATE INDEX ON info_route (prefix inet_ops);
 
 ALTER TABLE info_route SET (autovacuum_analyze_threshold = 50);
 ALTER TABLE info_route SET (autovacuum_vacuum_threshold = 50);
@@ -481,33 +787,6 @@ CREATE INDEX ON pdb_exchange_peers USING GIST (peer_ipv4 inet_ops);
 CREATE INDEX ON pdb_exchange_peers USING GIST (ix_prefix_v4 inet_ops);
 CREATE INDEX ON pdb_exchange_peers USING gin (peer_name gin_trgm_ops);
 CREATE INDEX ON pdb_exchange_peers (peer_asn);
-
-
--- Alerts table for security monitoring
-DROP TABLE IF EXISTS alerts CASCADE;
-CREATE TABLE alerts (
-	id                      bigserial           NOT NULL,
-    type                    varchar(128)        NOT NULL,
-	message                 text                NOT NULL,
-    monitored_asn           bigint,
-    offending_asn           bigint,
-    monitored_asname        varchar(200),
-    offending_asname        varchar(200),
-	affected_prefix         inet,
-	history_url             varchar(512),
-	event_json              jsonb,
-    timestamp               timestamp(6)        without time zone default (now() at time zone 'utc') NOT NULL
-) TABLESPACE timeseries;
-
-CREATE INDEX ON alerts (monitored_asn);
-CREATE INDEX ON alerts (offending_asn);
-CREATE INDEX ON alerts (type);
-CREATE INDEX ON alerts using gist (affected_prefix inet_ops);
-
--- convert to timescaledb
-SELECT create_hypertable('alerts', 'timestamp');
-SELECT add_retention_policy('alerts', INTERVAL '8 weeks');
-
 
 -- Table structure for link state nodes
 DROP TABLE IF EXISTS ls_nodes CASCADE;

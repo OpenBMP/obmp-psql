@@ -1,21 +1,14 @@
 /*
- * Copyright (c) 2018-2020 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
+
 package org.openbmp.psqlquery;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import org.openbmp.RouterObject;
 import org.openbmp.api.helpers.IpAddr;
-import org.openbmp.api.parsed.message.MsgBusFields;
 import org.openbmp.api.parsed.message.UnicastPrefixPojo;
 
 
@@ -26,27 +19,19 @@ public class UnicastPrefixQuery extends Query {
 		
 		this.records = records;
 	}
-	
-	
-    /**
-     * Generate insert/update statement, sans the values
-     *
-     * @return Two strings are returned
-     *      0 = Insert statement string up to VALUES keyword
-     *      1 = ON DUPLICATE KEY UPDATE ...  or empty if not used.
-     */
+
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO ip_rib (hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
                            "origin_as,prefix,prefix_len,prefix_bits,timestamp," +
                            "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
 
-//                            " VALUES ",
-                            "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
-
-                            ") t(hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
-                                "origin_as,prefix,prefix_len,prefix_bits,timestamp,"  +
-                                "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
-                           " ORDER BY hash_id,timestamp desc" +
+                            " VALUES ",
+//                            "SELECT DISTINCT ON (hash_id) * FROM ( VALUES ",
+//
+//                            ") t(hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
+//                                "origin_as,prefix,prefix_len,prefix_bits,timestamp,"  +
+//                                "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
+//                           " ORDER BY hash_id,timestamp desc" +
                            " ON CONFLICT (peer_hash_id,hash_id) DO UPDATE SET timestamp=excluded.timestamp," +
                                "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ip_rib.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                                "origin_as=CASE excluded.isWithdrawn WHEN true THEN ip_rib.origin_as ELSE excluded.origin_as END," +
@@ -57,21 +42,12 @@ public class UnicastPrefixQuery extends Query {
         return stmt;
     }
 
-    /**
-     * Generate bulk values statement for SQL bulk insert.
-     *
-     * @return String in the format of (col1, col2, ...)[,...]
-     */
-    public String genValuesStatement() {
-        StringBuilder sb = new StringBuilder();
+    public Map<String, String> genValuesStatement() {
+        Map<String, String> values = new HashMap<>();
 
-        int i = 0;
+
         for (UnicastPrefixPojo pojo: records) {
-
-            if (i > 0)
-                sb.append(',');
-
-            i++;
+            StringBuilder sb = new StringBuilder();
 
             sb.append("('");
             sb.append(pojo.getHash()); sb.append("'::uuid,");
@@ -113,9 +89,11 @@ public class UnicastPrefixQuery extends Query {
             sb.append(pojo.getAdjRibIn()); sb.append("::boolean");
 
             sb.append(')');
+
+            values.put(pojo.getHash(), sb.toString());
         }
 
-        return sb.toString();
+        return values;
     }
 
 }

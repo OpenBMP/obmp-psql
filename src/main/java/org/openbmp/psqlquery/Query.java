@@ -1,10 +1,5 @@
 /*
- * Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
 package org.openbmp.psqlquery;
 
@@ -53,10 +48,10 @@ public abstract class Query {
     public abstract String[] genInsertStatement();
 
     /**
-     * Generate bulk values statement for SQL bulk insert.
+     * Generate values map.
      *
-     * @return String in the format of (col1, col2, ...)[,...]
+     * @return Map; Key is the record hash_id and value is the statement for SQL bulk insert.
      */
-    public abstract String genValuesStatement();
+    public abstract Map<String, String> genValuesStatement();
 
 }

@@ -1,17 +1,15 @@
 /*
- * Copyright (c) 2020 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
+
 package org.openbmp.psqlquery;
 
 import org.openbmp.api.helpers.IpAddr;
 import org.openbmp.api.parsed.message.LsLinkPojo;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class LsLinkQuery extends Query {
@@ -23,13 +21,6 @@ public class LsLinkQuery extends Query {
     }
 
 
-    /**
-     * Generate insert/update statement, sans the values
-     *
-     * @return Two strings are returned
-     *      0 = Insert statement string up to VALUES keyword
-     *      1 = ON DUPLICATE KEY UPDATE ...  or empty if not used.
-     */
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO ls_links " +
                     "(hash_id,peer_hash_id,base_attr_hash_id,seq," +
@@ -39,16 +30,17 @@ public class LsLinkQuery extends Query {
                     "igp_metric,srlg,name,local_igp_router_id,local_router_id,remote_igp_router_id,remote_router_id,local_asn," +
                     "remote_asn,peer_node_sid,sr_adjacency_sids,iswithdrawn,timestamp)" +
 
-                " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
+                " VALUES ",
+//                " SELECT DISTINCT ON (hash_id,peer_hash_id) * FROM ( VALUES ",
 
-                ") t(hash_id,peer_hash_id,base_attr_hash_id,seq," +
-                        "mt_id,interface_addr," +
-                        "neighbor_addr,isIPv4,protocol,local_link_id,remote_link_id,local_node_hash_id,remote_node_hash_id," +
-                        "admin_group,max_link_bw,max_resv_bw,unreserved_bw,te_def_metric,protection_type,mpls_proto_mask," +
-                        "igp_metric,srlg,name,local_igp_router_id,local_router_id,remote_igp_router_id,remote_router_id,local_asn," +
-                        "remote_asn,peer_node_sid,sr_adjacency_sids,iswithdrawn,timestamp)" +
-                    " ORDER BY hash_id,peer_hash_id,timestamp desc " +
-                        "ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,isWithdrawn=excluded.isWithdrawn,seq=excluded.seq," +
+//                ") t(hash_id,peer_hash_id,base_attr_hash_id,seq," +
+//                        "mt_id,interface_addr," +
+//                        "neighbor_addr,isIPv4,protocol,local_link_id,remote_link_id,local_node_hash_id,remote_node_hash_id," +
+//                        "admin_group,max_link_bw,max_resv_bw,unreserved_bw,te_def_metric,protection_type,mpls_proto_mask," +
+//                        "igp_metric,srlg,name,local_igp_router_id,local_router_id,remote_igp_router_id,remote_router_id,local_asn," +
+//                        "remote_asn,peer_node_sid,sr_adjacency_sids,iswithdrawn,timestamp)" +
+//                    " ORDER BY hash_id,peer_hash_id,timestamp desc " +
+                        " ON CONFLICT (hash_id,peer_hash_id) DO UPDATE SET timestamp=excluded.timestamp,isWithdrawn=excluded.isWithdrawn,seq=excluded.seq," +
                             "base_attr_hash_id=CASE excluded.isWithdrawn WHEN true THEN ls_links.base_attr_hash_id ELSE excluded.base_attr_hash_id END," +
                             "interface_addr=CASE excluded.isWithdrawn WHEN true THEN ls_links.interface_addr ELSE excluded.interface_addr END," +
                             "neighbor_addr=CASE excluded.isWithdrawn WHEN true THEN ls_links.neighbor_addr ELSE excluded.neighbor_addr END," +
@@ -70,21 +62,11 @@ public class LsLinkQuery extends Query {
         return stmt;
     }
 
-    /**
-     * Generate bulk values statement for SQL bulk insert.
-     *
-     * @return String in the format of (col1, col2, ...)[,...]
-     */
-    public String genValuesStatement() {
-        StringBuilder sb = new StringBuilder();
+    public Map<String, String> genValuesStatement() {
+        Map<String, String> values = new HashMap<>();
 
-        int i = 0;
         for (LsLinkPojo pojo: records) {
-
-            if (i > 0)
-                sb.append(',');
-
-            i++;
+            StringBuilder sb = new StringBuilder();
 
             sb.append("('");
             sb.append(pojo.getHash()); sb.append("'::uuid,");
@@ -141,9 +123,11 @@ public class LsLinkQuery extends Query {
             sb.append(pojo.getWithdrawn()); sb.append(',');
             sb.append('\''); sb.append(pojo.getTimestamp()); sb.append("'::timestamp");
             sb.append(')');
+
+            values.put(pojo.getHash(), sb.toString());
         }
 
-        return sb.toString();
+        return values;
     }
 
 }

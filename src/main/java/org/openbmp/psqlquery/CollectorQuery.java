@@ -1,13 +1,9 @@
 /*
- * Copyright (c) 2018 Tim Evens (tim@evensweb.com).  All rights reserved.
- *
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License v1.0 which accompanies this distribution,
- * and is available at http://www.eclipse.org/legal/epl-v10.html
- *
+ * Copyright (c) 2018-2022 Cisco Systems, Inc. and others.  All rights reserved.
  */
 package org.openbmp.psqlquery;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,13 +21,6 @@ public class CollectorQuery extends Query{
 		this.records = records;
 	}
 	
-    /**
-     * Generate MySQL insert/update statement, sans the values
-     *
-     * @return Two strings are returned
-     *      0 = Insert statement string up to VALUES keyword
-     *      1 = ON DUPLICATE KEY UPDATE ...  or empty if not used.
-     */
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO collectors (hash_id,state,admin_id,routers,router_count,timestamp) " +
                                 " VALUES ",
@@ -41,20 +30,11 @@ public class CollectorQuery extends Query{
         return stmt;
     }
 
-    /**
-     * Generate bulk values statement for SQL bulk insert.
-     *
-     * @return String in the format of (col1, col2, ...)[,...]
-     */
-    public String genValuesStatement() {
-        StringBuilder sb = new StringBuilder();
+    public Map<String, String> genValuesStatement() {
+        Map<String, String> values = new HashMap<>();
 
-        int i = 0;
         for (CollectorPojo pojo : records) {
-            if (i > 0)
-                sb.append(',');
-
-            i++;
+            StringBuilder sb = new StringBuilder();
 
             sb.append("('");
             sb.append(pojo.getHash()); sb.append("'::uuid,");
@@ -64,9 +44,11 @@ public class CollectorQuery extends Query{
             sb.append(pojo.getRouter_count()); sb.append(',');
             sb.append('\''); sb.append(pojo.getTimestamp()); sb.append("'::timestamp");
             sb.append(')');
+
+            values.put(pojo.getHash(), sb.toString());
         }
 
-        return sb.toString();
+        return values;
     }
 
 
