@@ -6,7 +6,7 @@ base:
   stats_interval: 60
 
   # Number of consumer threads
-  consumer_threads: 3
+  consumer_threads: 4
 
   # In minutes; The maximum age between received collector heartbeats.
   #     The collector sends heatbeat messages every interval.  This
@@ -25,7 +25,7 @@ base:
   #  Following types are implemented.
   #   - Default
   #   - base attributes
-  writer_max_threads_per_type: 5
+  writer_max_threads_per_type: 4
 
   # Number of consecutive times the writer queue (per type) can sustain over
   #    the high threshold mark.  If queue is above threshold for a consecutive
@@ -42,15 +42,15 @@ base:
 
   # Number of seconds between rebalacing of writer threads
   #    Rebalance will drain writer queues at this interval if at least one writer is above threshold
-  writer_rebalance_seconds: 480
+  writer_rebalance_seconds: 900
 
   # Maximum input queue size
   #   Normally within the range of 1000 - 20000 is enough
-  writer_queue_size: 2500
+  writer_queue_size: 4000
 
   # Maximum input queue size for the consumer
   #   A good starting size is 2 times the size of the writer queue size
-  consumer_queue_size: 30000
+  consumer_queue_size: 10000
 
 postgres:
 
@@ -68,14 +68,14 @@ postgres:
 
   # The number of statements or records to batch in a single bulk update/insert/delete
   #   NOTE: It's more efficient to have more threads with a low batch size
-  batch_records: 500
+  batch_records: 3000
 
   # The time in milliseconds to wait for batching records in a bulk update/insert/delete
   #  Note this will state compress records in this time period.
-  batch_time_millis: 200
+  batch_time_millis: 300
 
   # The number of times to retry a statement
-  retries: 10
+  retries: 6
 
 kafka:
 

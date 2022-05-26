@@ -36,6 +36,11 @@ CREATE INDEX ON l3vpn_rib USING GIN  (ext_community_list array_ops);
 CREATE INDEX ON l3vpn_rib (origin_as);
 CREATE INDEX ON l3vpn_rib (peer_hash_id,origin_as);
 
+ALTER TABLE l3vpn_rib SET (autovacuum_analyze_threshold = 1000);
+ALTER TABLE l3vpn_rib SET (autovacuum_vacuum_threshold = 2000);
+ALTER TABLE l3vpn_rib SET (autovacuum_vacuum_cost_limit = 200);
+ALTER TABLE l3vpn_rib SET (autovacuum_vacuum_cost_delay = 10);
+
 -- Table structure for table ip_rib_log
 DROP TABLE IF EXISTS l3vpn_rib_log CASCADE;
 CREATE TABLE l3vpn_rib_log (

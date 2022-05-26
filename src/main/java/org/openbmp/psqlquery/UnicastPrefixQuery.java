@@ -22,7 +22,7 @@ public class UnicastPrefixQuery extends Query {
 
     public String[] genInsertStatement() {
         String [] stmt = { " INSERT INTO ip_rib (hash_id,peer_hash_id,base_attr_hash_id,isIPv4," +
-                           "origin_as,prefix,prefix_len,prefix_bits,timestamp," +
+                           "origin_as,prefix,prefix_len,timestamp," +
                            "isWithdrawn,path_id,labels,isPrePolicy,isAdjRibIn) " +
 
                             " VALUES ",
@@ -47,6 +47,9 @@ public class UnicastPrefixQuery extends Query {
 
 
         for (UnicastPrefixPojo pojo: records) {
+            if (pojo.getPrefix_len() > 128)
+                continue;
+
             StringBuilder sb = new StringBuilder();
 
             sb.append("('");
@@ -71,15 +74,15 @@ public class UnicastPrefixQuery extends Query {
 
             sb.append(pojo.getPrefix_len()); sb.append(',');
 
-            try {
-                sb.append('\''); sb.append(IpAddr.getIpBits(pojo.getPrefix()).substring(0, pojo.getPrefix_len()));
-                sb.append("',");
-            } catch (StringIndexOutOfBoundsException e) {
-                //TODO: Fix getIpBits to support mapped IPv4 addresses in IPv6 (::ffff:ipv4)
-                System.out.println("IP prefix failed to convert to bits: " +
-                        pojo.getPrefix() + " len: " + pojo.getPrefix_len());
-                sb.append("'',");
-            }
+//            try {
+//                sb.append('\''); sb.append(IpAddr.getIpBits(pojo.getPrefix()).substring(0, pojo.getPrefix_len()));
+//                sb.append("',");
+//            } catch (StringIndexOutOfBoundsException e) {
+//                //TODO: Fix getIpBits to support mapped IPv4 addresses in IPv6 (::ffff:ipv4)
+//                System.out.println("IP prefix failed to convert to bits: " +
+//                        pojo.getPrefix() + " len: " + pojo.getPrefix_len());
+//                sb.append("'',");
+//            }
 
             sb.append('\''); sb.append(pojo.getTimestamp()); sb.append("'::timestamp,");
             sb.append(pojo.getWithdrawn()); sb.append(',');

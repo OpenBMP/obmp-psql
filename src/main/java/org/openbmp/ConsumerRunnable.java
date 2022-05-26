@@ -73,7 +73,7 @@ public class ConsumerRunnable implements Runnable {
     private List<Pattern> topic_patterns;
     private StringBuilder topic_regex_pattern;
 
-    private Set<String> processed_attr;
+    private HashMap<String, Long> processed_attr;
 
     private BigInteger messageCount;
     private long collector_msg_count;
@@ -124,7 +124,7 @@ public class ConsumerRunnable implements Runnable {
         writer_thread_map = new HashMap<>();
         last_writer_thread_chg_time = 0L;
 
-        processed_attr = new HashSet<>();
+        processed_attr = new HashMap<>();
 
         messageCount = BigInteger.valueOf(0);
         this.cfg = cfg;
@@ -486,10 +486,12 @@ public class ConsumerRunnable implements Runnable {
 
                         // Cache in memory processed base attributes.  If processed, skip adding it to the DB again
                         for (BaseAttributePojo ba_entry : ba_temp.records) {
-                            if (processed_attr.contains(ba_entry.getHash())) {
+                            if (processed_attr.containsKey(ba_entry.getHash())) {
+                                processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
                                 continue;
+
                             } else {
-                                processed_attr.add(ba_entry.getHash());
+                                processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
                                 ba_list.add(ba_entry);
                             }
                         }
@@ -760,6 +762,20 @@ public class ConsumerRunnable implements Runnable {
     private long checkWriterThreads(long prev_time) {
 
         if (System.currentTimeMillis() - prev_time > 10000) {
+
+            /*
+             * Purge processed attributes that are too old (no updates for more than 15 minutes)
+             */
+            long purge_age = System.currentTimeMillis() - 1200000;
+            HashMap<String, Long> new_processed_attr = new HashMap<>();
+            for (Map.Entry<String, Long> entry: processed_attr.entrySet()) {
+                if (entry.getValue().longValue() > purge_age) {
+                    new_processed_attr.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            logger.info("purged %d attributes from cache, current size is %d", processed_attr.size() - new_processed_attr.size(), new_processed_attr.size());
+            processed_attr = new_processed_attr;
 
             for (ThreadType t: ThreadType.values()) {
                 List<WriterObject> writers = writer_thread_map.get(t);

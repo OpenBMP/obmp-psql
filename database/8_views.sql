@@ -44,7 +44,7 @@ CREATE  VIEW v_ip_routes AS
                 r.path_id, r.labels,
                 r.hash_id as rib_hash_id,
                 r.base_attr_hash_id as base_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,
-                r.prefix_bits,r.isPrePolicy,r.isAdjRibIn
+                r.isPrePolicy,r.isAdjRibIn
         FROM ip_rib r
             JOIN bgp_peers p ON (r.peer_hash_id = p.hash_id)
             JOIN base_attrs attr ON (attr.hash_id = r.base_attr_hash_id and attr.peer_hash_id = r.peer_hash_id)
@@ -66,7 +66,7 @@ CREATE  VIEW v_ip_routes_geo AS
                 r.path_id, r.labels,
                 r.hash_id as rib_hash_id,
                 r.base_attr_hash_id as base_hash_id, r.peer_hash_id, rtr.hash_id as router_hash_id,r.isWithdrawn,
-                r.prefix_bits,r.isPrePolicy,r.isAdjRibIn,
+                r.isPrePolicy,r.isAdjRibIn,
                 g.ip as geo_ip,g.city as City, g.stateprov as stateprov, g.country as country,
                 g.latitude as latitude, g.longitude as longitude
         FROM ip_rib r

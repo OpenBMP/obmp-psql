@@ -206,7 +206,7 @@ def add_route_to_db(db, record, commit=False):
             query = query[:-1]
 
         query += " ) t(prefix,prefix_len,origin_as,descr,source) " # add order by if needed
-        query += " ON CONFLICT (prefix,prefix_len,origin_as) DO UPDATE SET "
+        query += " ON CONFLICT (prefix,origin_as) DO UPDATE SET "
         query += "   descr=excluded.descr, source=excluded.source, timestamp=now()"
 
         # print "QUERY = %s" % query
