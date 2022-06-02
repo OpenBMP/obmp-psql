@@ -35,6 +35,8 @@ SQL_INSERT = ("INSERT INTO geo_ip (family,ip,city,stateprov,country,latitude,lon
 
 SQL_CONFLICT = (" ON CONFLICT (ip) DO UPDATE SET "
                 " city=excluded.city, stateprov=excluded.stateprov,"
+                " timezone_offset=excluded.timezone_offset,"
+                " timezone_name=excluded.timezone_name,"
                 " country=excluded.country, latitude=excluded.latitude, longitude=excluded.longitude;")
 
 
