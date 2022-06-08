@@ -437,7 +437,7 @@ CREATE TABLE info_route (
     origin_as               bigint              NOT NULL,
     source                  varchar(32)         NOT NULL,
     timestamp               timestamp           without time zone default (now() at time zone 'utc') NOT NULL,
-    PRIMARY KEY (prefix,origin_as)
+    PRIMARY KEY (prefix,prefix_len,origin_as)
 );
 CREATE INDEX ON info_route (origin_as);
 CREATE INDEX ON info_route USING GIST (prefix inet_ops);

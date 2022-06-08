@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-  Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
+  Copyright (c) 2021-2022 Cisco Systems, Inc. and others.  All rights reserved.
 
   .. moduleauthor:: Tim Evens <tim@evensweb.com>
 """
@@ -10,7 +10,6 @@ import os
 import sys
 from collections import OrderedDict, deque
 from ftplib import FTP
-from shutil import rmtree
 import traceback
 
 import dbHandler
@@ -19,29 +18,32 @@ import dbHandler
 # RR Database download sites
 # ----------------------------------------------------------------
 RR_DB_FTP = OrderedDict()
-RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
-RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
+
+# Only add RADB as it mirrors the others.
 RR_DB_FTP['radb'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'radb.db.gz'}
-RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db.gz'}
-RR_DB_FTP['afrinic'] = {'site': 'ftp.afrinic.net', 'path': '/pub/dbase/', 'filename': 'afrinic.db.gz'}
-RR_DB_FTP['apnic'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route.gz'}
-RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
-RR_DB_FTP['apnic_v6'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route6.gz'}
-RR_DB_FTP['ripe'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route.gz'}
-RR_DB_FTP['ripe_v6'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route6.gz'}
+
+#RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
+#RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
+# RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db.gz'}
+# RR_DB_FTP['afrinic'] = {'site': 'ftp.afrinic.net', 'path': '/pub/dbase/', 'filename': 'afrinic.db.gz'}
+# RR_DB_FTP['apnic'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route.gz'}
+# RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
+# RR_DB_FTP['apnic_v6'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route6.gz'}
+# RR_DB_FTP['ripe'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route.gz'}
+# RR_DB_FTP['ripe_v6'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route6.gz'}
 
 
 RR_DB_FILES = OrderedDict()
-RR_DB_FILES['nttcom'] = {'filename': 'nttcom.db.gz'}
-RR_DB_FILES['level3'] = {'filename': 'level3.db.gz'}
 RR_DB_FILES['radb'] = {'filename': 'radb.db.gz'}
-RR_DB_FILES['arin'] = {'filename': 'arin.db.gz'}
-RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
-RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
-RR_DB_FILES['jpirr'] = {'filename': 'jpirr.db.gz'}
-RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
-RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
-RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
+# RR_DB_FILES['nttcom'] = {'filename': 'nttcom.db.gz'}
+# RR_DB_FILES['level3'] = {'filename': 'level3.db.gz'}
+# RR_DB_FILES['arin'] = {'filename': 'arin.db.gz'}
+# RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
+# RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
+# RR_DB_FILES['jpirr'] = {'filename': 'jpirr.db.gz'}
+# RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
+# RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
+# RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
 
 # ----------------------------------------------------------------
 # Whois mapping
@@ -130,7 +132,7 @@ def import_rr_db_file(db, source, db_filename):
                     if ' ' in value:
                         value = value.split(' ', 1)[0]
 
-                    # Convert from dot notiation back to numeric
+                    # Convert from dot notation back to numeric
                     if "." in value:
                         a = value.split('.', 1)
                         record[WHOIS_ATTR_MAP[attr]] = (int(a[0]) << 16) + int(a[1])
@@ -190,7 +192,7 @@ def add_route_to_db(db, record, commit=False):
     if ((commit == True or len(bulk_insert_queue) > MAX_BULK_INSERT_QUEUE_SIZE) and
             len(bulk_insert_queue)):
         query = "INSERT INTO info_route (prefix,prefix_len,origin_as,descr,source) "
-        query += " SELECT DISTINCT ON (prefix,prefix_len,origin_as) * FROM ( VALUES "
+        query += " SELECT DISTINCT ON (prefix,origin_as) * FROM ( VALUES "
 
 
         # try:
@@ -206,7 +208,7 @@ def add_route_to_db(db, record, commit=False):
             query = query[:-1]
 
         query += " ) t(prefix,prefix_len,origin_as,descr,source) " # add order by if needed
-        query += " ON CONFLICT (prefix,origin_as) DO UPDATE SET "
+        query += " ON CONFLICT (prefix,prefix_len,origin_as) DO UPDATE SET "
         query += "   descr=excluded.descr, source=excluded.source, timestamp=now()"
 
         # print "QUERY = %s" % query
