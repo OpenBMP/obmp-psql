@@ -9,7 +9,7 @@ source /usr/local/openbmp/pg_profile
 
 rm -f /tmp/dbip.csv.gz /tmp/dbip.csv
 
-echo "INFO: Downloading dbip-city-lite-$(date "+%Y-%m").csv.gz"
+echo "Downloading dbip-city-lite-$(date "+%Y-%m").csv.gz"
 wget -O /tmp/dbip.csv.gz https://download.db-ip.com/free/dbip-city-lite-$(date "+%Y-%m").csv.gz
 echo $?
 
