@@ -86,30 +86,6 @@ CREATE TRIGGER upd_bgp_peers BEFORE UPDATE ON bgp_peers
 
 
 -- =========== IP RIB =====================
--- CREATE OR REPLACE FUNCTION t_ip_rib_update()
--- 	RETURNS trigger AS $$
--- BEGIN
--- 	-- Only update
--- 	-- Add record to log table if there is a change
--- 	IF ((new.isWithdrawn <> old.isWithdrawn) OR (not new.isWithdrawn AND new.base_attr_hash_id <> old.base_attr_hash_id)) THEN
--- 		IF (new.isWithdrawn) THEN
--- 			INSERT INTO ip_rib_log (isWithdrawn,prefix,prefix_len,base_attr_hash_id,peer_hash_id,origin_as,timestamp)
--- 				VALUES (true,new.prefix,new.prefix_len,old.base_attr_hash_id,new.peer_hash_id,old.origin_as,new.timestamp);
--- 		ELSE
--- 			-- Update first added to DB when prefix has been withdrawn for too long
---             IF (old.isWithdrawn AND old.timestamp < (new.timestamp - interval '6 hours')) THEN
---                 SELECT current_timestamp(6) INTO new.first_added_timestamp;
---             END IF;
---
--- 			INSERT INTO ip_rib_log (isWithdrawn,prefix,prefix_len,base_attr_hash_id,peer_hash_id,origin_as,timestamp)
--- 				VALUES (false,new.prefix,new.prefix_len,new.base_attr_hash_id,new.peer_hash_id,new.origin_as,new.timestamp);
--- 		END IF;
--- 	END IF;
---
--- 	RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION t_ip_rib_update()
 	RETURNS trigger AS $$
 BEGIN
@@ -135,35 +111,6 @@ $$ LANGUAGE plpgsql;
 -- END;
 -- $$ LANGUAGE plpgsql;
 
-
--- ** not used **
--- CREATE OR REPLACE FUNCTION t_ip_rib_insert()
--- 	RETURNS trigger AS $$
--- BEGIN
---
--- 	-- not withdrawn, add record to global table
--- 	IF (not new.isWithdrawn) THEN
--- 		-- Update gen global ip rib  table
--- 		INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,rpki_origin_as,irr_origin_as,irr_source,prefix_bits,isIPv4)
---
--- 	      SELECT new.prefix,new.prefix_len,new.origin_as,
--- 	             rpki.origin_as, w.origin_as,w.source,new.prefix_bits,new.isIPv4
---
--- 	      FROM (SELECT new.prefix as prefix, new.prefix_len as prefix_len, new.origin_as as origin_as, new.prefix_bits,
--- 	              new.isIPv4) rib
--- 	        LEFT JOIN info_route w ON (new.prefix = w.prefix AND
--- 	                                        new.prefix_len = w.prefix_len)
--- 	        LEFT JOIN rpki_validator rpki ON (new.prefix = rpki.prefix AND
--- 	                                          new.prefix_len >= rpki.prefix_len and new.prefix_len <= rpki.prefix_len_max)
--- 	      LIMIT 1
---
--- 	    ON CONFLICT (prefix,prefix_len,recv_origin_as) DO UPDATE SET rpki_origin_as = excluded.rpki_origin_as,
--- 	                  irr_origin_as = excluded.irr_origin_as, irr_source=excluded.irr_source;
--- 	END IF;
---
--- 	RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
 
 -- trigger applied on partitions
 -- DROP TRIGGER IF EXISTS ins_ip_rib ON ip_rib;

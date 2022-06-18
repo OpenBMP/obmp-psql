@@ -326,6 +326,7 @@ CREATE TABLE ip_rib (
 
 CREATE INDEX ON ip_rib (hash_id);
 CREATE INDEX ON ip_rib (timestamp DESC);
+CREATE INDEX ON ip_rib (first_added_timestamp DESC);
 --CREATE INDEX ON ip_rib USING HASH (peer_hash_id);
 -- Brin apparently requires a lot of memory and changes psql to prefer this index
 -- CREATE INDEX ON ip_rib using brin (peer_hash_id,timestamp);
