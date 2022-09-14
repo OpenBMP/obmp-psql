@@ -184,7 +184,6 @@ DECLARE
 	execution_start timestamptz  := clock_timestamp();
 	insert_count    int;
 	start_time timestamptz := now();
-	chg_prefix inet;
 BEGIN
 
 	select time_bucket('5 minutes', timestamp - interval '5 minute') INTO start_time
@@ -204,21 +203,12 @@ BEGIN
 	raise INFO 'Start time       : %', execution_start;
 	raise INFO 'Last Query Time  : %', start_time;
 
-	raise INFO '-> Looping through changed prefixes ...';
+	raise INFO '-> Updating changed prefixes ...';
 
 	insert_count = 0;
 
-	FOR chg_prefix IN
-		SELECT prefix
-		FROM ip_rib_log WHERE timestamp >= start_time AND origin_as != 23456
-		UNION SELECT prefix FROM ip_rib where first_added_timestamp >= start_time
-		GROUP BY prefix
-
-		LOOP
-			insert_count = insert_count + 1;
-
-			INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,
-			                           iswithdrawn,timestamp,first_added_timestamp,num_peers,advertising_peers,withdrawn_peers)
+	INSERT INTO global_ip_rib (prefix,prefix_len,recv_origin_as,
+	                           iswithdrawn,timestamp,first_added_timestamp,num_peers,advertising_peers,withdrawn_peers)
 
 			SELECT r.prefix,
 			       max(r.prefix_len),
@@ -230,7 +220,8 @@ BEGIN
 			       count(distinct r.peer_hash_id) FILTER (WHERE r.iswithdrawn = False) as advertising_peers,
 			       count(distinct r.peer_hash_id) FILTER (WHERE r.iswithdrawn = True)  as withdrawn_peers
 			FROM ip_rib r
-			WHERE r.prefix = chg_prefix
+			WHERE
+			  (timestamp >= start_time OR first_added_timestamp >= start_time)
 			  AND origin_as != 23456
 			GROUP BY r.prefix, r.origin_as
 			ON CONFLICT (prefix,recv_origin_as)
@@ -241,8 +232,7 @@ BEGIN
 				              advertising_peers=excluded.advertising_peers,
 				              withdrawn_peers=excluded.withdrawn_peers;
 
-		END LOOP;
-
+	GET DIAGNOSTICS insert_count = row_count;
 	raise INFO 'Rows updated   : %', insert_count;
 	raise INFO 'Duration       : %', clock_timestamp() - execution_start;
 	raise INFO 'Completion time: %', clock_timestamp();
@@ -433,7 +423,7 @@ CREATE OR REPLACE FUNCTION update_peer_rib_counts()
 BEGIN
      -- Per peer rib counts - every 15 minutes
      INSERT INTO stats_peer_rib (interval_time,peer_hash_id,v4_prefixes,v6_prefixes)
-       SELECT to_timestamp((extract(epoch from now())::bigint / 900)::bigint * 900),
+       SELECT  time_bucket('15 minutes', now()),
              peer_hash_id,
              sum(CASE WHEN isIPv4 = true THEN 1 ELSE 0 END) AS v4_prefixes,
              sum(CASE WHEN isIPv4 = false THEN 1 ELSE 0 END) as v6_prefixes

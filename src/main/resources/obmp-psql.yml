@@ -6,7 +6,7 @@ base:
   stats_interval: 60
 
   # Number of consumer threads
-  consumer_threads: 4
+  consumer_threads: 8
 
   # In minutes; The maximum age between received collector heartbeats.
   #     The collector sends heatbeat messages every interval.  This
@@ -25,7 +25,7 @@ base:
   #  Following types are implemented.
   #   - Default
   #   - base attributes
-  writer_max_threads_per_type: 4
+  writer_max_threads_per_type: 1
 
   # Number of consecutive times the writer queue (per type) can sustain over
   #    the high threshold mark.  If queue is above threshold for a consecutive

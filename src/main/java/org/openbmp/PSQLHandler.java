@@ -161,13 +161,18 @@ public class PSQLHandler {
         }
 
         // Loop the request if broken pipe, connection timed out, or deadlock
-         for (int i = 0; i < retries; i++) {
+        Statement stmt = null;
+        for (int i = 0; i < retries; i++) {
             try {
-                Statement stmt = con.createStatement();
+                if (i == 0) {
+                    con.setAutoCommit(false);
+                    stmt = con.createStatement();
+                }
+
                 logger.trace("SQL Query retry = %d: %s", i, query);
 
                 stmt.executeUpdate(query);
-                stmt.close();
+                con.commit();
 
                 i = retries;
                 success = Boolean.TRUE;
@@ -193,6 +198,7 @@ public class PSQLHandler {
                         }
                     }
                 } else if (e.getMessage().contains("deadlock") ) {
+
                     try {
                         Thread.sleep(150);
                     } catch (InterruptedException e2) {
@@ -201,6 +207,17 @@ public class PSQLHandler {
                 }
             }
         }
+
+        try {
+            con.setAutoCommit(true);
+
+            if (stmt != null)
+                stmt.close();
+
+        } catch (SQLException e) {
+            // ignore
+        }
+
 
         if (!success) {
             logger.warn("Failed to insert/update after %d max retires", retries);

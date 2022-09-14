@@ -125,12 +125,13 @@ public class PeerQuery extends Query{
             StringBuilder sb = new StringBuilder();
 
             //sb.append("UPDATE ip_rib SET isWithdrawn = true WHERE peer_hash_id = '");
+            sb.append("LOCK ip_rib IN EXCLUSIVE MODE;");
             sb.append("DELETE FROM ip_rib WHERE peer_hash_id = '");
             sb.append(pojo.getHash());
             sb.append("' AND timestamp < '");
             sb.append(pojo.getTimestamp()); sb.append('\'');
 
-//            sb.append("; UPDATE ls_nodes SET isWithdrawn = True WHERE peer_hash_id = '");
+//            sb.append("; UPDATE ls_nodes SsET isWithdrawn = True WHERE peer_hash_id = '");
 //            sb.append(lookupValue(MsgBusFields.HASH, i));
 //            sb.append("' AND timestamp < '");
 //            sb.append(rowMap.get(i).get(MsgBusFields.TIMESTAMP.getName()) + "'");

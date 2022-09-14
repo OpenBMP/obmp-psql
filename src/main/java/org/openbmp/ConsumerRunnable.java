@@ -372,194 +372,199 @@ public class ConsumerRunnable implements Runnable {
                 ThreadType thread_type;
                 for (ConsumerRecord<String, String> record : records) {
 
-                    messageCount = messageCount.add(BigInteger.ONE);
+                    try {
+                        messageCount = messageCount.add(BigInteger.ONE);
 
-                    //Extract the Headers and Content from the message.
-                    Message message = new Message(record.value());
+                        //Extract the Headers and Content from the message.
+                        Message message = new Message(record.value());
 
-                    Base obj = null;
-                    Query dbQuery = null;
-                    thread_type = ThreadType.THREAD_DEFAULT;
-
-                    /*
-                     * Parse the data based on topic
-                     */
-                    query = new HashMap<String, String>();
-                    if ((message.getType() != null && message.getType().equalsIgnoreCase("collector"))
-                            || record.topic().equals("openbmp.parsed.collector")) {
-                        logger.trace("Parsing collector message");
-                        collector_msg_count++;
-
-                        Collector collector = new Collector(message.getContent());
-                        CollectorQuery collectorQuery = new CollectorQuery(collector.records);
-
-                        last_collector_msg_time = System.currentTimeMillis();
-
-                        if (collectorQuery != null) {
-                            db.updateQuery(create_sql_string(collectorQuery), cfg.getDb_retries());
-
-                            String sql = collectorQuery.genRouterCollectorUpdate();
-
-                            if (sql != null && !sql.isEmpty()) {
-                                logger.debug("collectorUpdate: %s", sql);
-
-                                db.updateQuery(sql, cfg.getDb_retries());
-                            }
-
-                            consumer.poll(Duration.ofMillis(0));            // heartbeat
-                        }
-
-                        continue;
-
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("router"))
-                            || record.topic().equals("openbmp.parsed.router")) {
+                        Base obj = null;
+                        Query dbQuery = null;
+                        thread_type = ThreadType.THREAD_DEFAULT;
 
                         /*
-                         * DB is updated directly within this thread, not bulk
+                         * Parse the data based on topic
                          */
-                        logger.trace("Parsing router message");
-                        router_msg_count++;
+                        query = new HashMap<String, String>();
+                        if ((message.getType() != null && message.getType().equalsIgnoreCase("collector"))
+                                || record.topic().equals("openbmp.parsed.collector")) {
+                            logger.trace("Parsing collector message");
+                            collector_msg_count++;
 
-                        Router router = new Router(message.getContent());
-                        RouterQuery routerQuery = new RouterQuery(message.getCollector_hash_id(), router.records);
+                            Collector collector = new Collector(message.getContent());
+                            CollectorQuery collectorQuery = new CollectorQuery(collector.records);
 
-                        if (routerQuery != null) {
-                            // Add/update routers
+                            last_collector_msg_time = System.currentTimeMillis();
 
-                            db.updateQuery(create_sql_string(routerQuery), cfg.getDb_retries());
+                            if (collectorQuery != null) {
+                                db.updateQuery(create_sql_string(collectorQuery), cfg.getDb_retries());
 
-                            consumer.poll(Duration.ZERO);       // heartbeat
+                                String sql = collectorQuery.genRouterCollectorUpdate();
 
-                            // Update peers based on router change
-                            String sql = routerQuery.genPeerRouterUpdate(routerMap);
+                                if (sql != null && !sql.isEmpty()) {
+                                    logger.debug("collectorUpdate: %s", sql);
 
-                            if (sql != null && !sql.isEmpty()) {
-                                logger.debug("RouterUpdate = %s", sql);
-                                db.updateQuery(sql, cfg.getDb_retries());
+                                    db.updateQuery(sql, cfg.getDb_retries());
+                                }
+
+                                consumer.poll(Duration.ofMillis(0));            // heartbeat
                             }
 
-                            // Update router tracking with indexes
-                            updateRouterMap();
-                        }
-
-                        continue;
-
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("peer"))
-                            || record.topic().equals("openbmp.parsed.peer")) {
-                        /*
-                         * DB is updated directly within this thread
-                         */
-                        logger.trace("Parsing peer message");
-                        peer_msg_count++;
-
-                        Peer peer = new org.openbmp.api.parsed.processor.Peer(message.getContent());
-                        PeerQuery peerQuery = new PeerQuery(peer.records);
-
-                        if (peerQuery != null) {
-
-                            // Add/update peers
-                            db.updateQuery(create_sql_string(peerQuery), cfg.getDb_retries());
-
-                            consumer.poll(Duration.ofMillis(0));       // heartbeat
-
-                            // Update rib tables based on peer
-                            for (String sql: peerQuery.genRibPeerUpdate()) {
-                                logger.debug("Updating NLRI's for peer change: %s", sql);
-
-                                db.updateQuery(sql, cfg.getDb_retries());
-
-                                consumer.poll(Duration.ofMillis(0)); // heartbeat
-                            }
-                        }
-
-                        continue;
-
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("base_attribute"))
-                            || record.topic().equals("openbmp.parsed.base_attribute")) {
-                        logger.trace("Parsing base_attribute message");
-                        base_attribute_msg_count++;
-
-                        //thread_type = ThreadType.THREAD_ATTRIBUTES;
-
-                        List<BaseAttributePojo> ba_list = new ArrayList();
-                        BaseAttribute ba_temp = new org.openbmp.api.parsed.processor.BaseAttribute(message.getContent());
-
-                        // Cache in memory processed base attributes.  If processed, skip adding it to the DB again
-                        for (BaseAttributePojo ba_entry : ba_temp.records) {
-                            if (processed_attr.containsKey(ba_entry.getHash())) {
-                                processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
-                                continue;
-
-                            } else {
-                                processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
-                                ba_list.add(ba_entry);
-                            }
-                        }
-
-                        if (ba_list.size() <= 0)
                             continue;
 
-                        dbQuery = new BaseAttributeQuery(ba_list);
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("router"))
+                                || record.topic().equals("openbmp.parsed.router")) {
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("unicast_prefix"))
-                            || record.topic().equals("openbmp.parsed.unicast_prefix")) {
-                        logger.trace("Parsing unicast_prefix message");
-                        unicast_prefix_msg_count++;
+                            /*
+                             * DB is updated directly within this thread, not bulk
+                             */
+                            logger.trace("Parsing router message");
+                            router_msg_count++;
 
-                        UnicastPrefix up = new UnicastPrefix(message.getContent());
-                        dbQuery = new UnicastPrefixQuery(up.records);
+                            Router router = new Router(message.getContent());
+                            RouterQuery routerQuery = new RouterQuery(message.getCollector_hash_id(), router.records);
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("l3vpn"))
-                            || record.topic().equals("openbmp.parsed.l3vpn")) {
-                        logger.trace("Parsing L3VPN prefix message");
-                        l3vpn_prefix_msg_count++;
+                            if (routerQuery != null) {
+                                // Add/update routers
 
-                        L3VpnPrefix vp = new L3VpnPrefix(message.getContent());
-                        dbQuery = new L3VpnPrefixQuery(vp.records);
+                                db.updateQuery(create_sql_string(routerQuery), cfg.getDb_retries());
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("bmp_stat"))
-                            || record.topic().equals("openbmp.parsed.bmp_stat")) {
-                        logger.trace("Parsing bmp_stat message");
-                        stat_msg_count++;
+                                consumer.poll(Duration.ZERO);       // heartbeat
 
-                        obj = new BmpStat(message.getContent());
-                        dbQuery = new BmpStatQuery(obj.getRowMap());
+                                // Update peers based on router change
+                                String sql = routerQuery.genPeerRouterUpdate(routerMap);
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_node"))
-                            || record.topic().equals("openbmp.parsed.ls_node")) {
-                        logger.trace("Parsing ls_node message");
-                        ls_node_msg_count++;
+                                if (sql != null && !sql.isEmpty()) {
+                                    logger.debug("RouterUpdate = %s", sql);
+                                    db.updateQuery(sql, cfg.getDb_retries());
+                                }
 
-                        LsNode ls = new LsNode(message.getContent());
-                        dbQuery = new LsNodeQuery(ls.records);
+                                // Update router tracking with indexes
+                                updateRouterMap();
+                            }
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_link"))
-                            || record.topic().equals("openbmp.parsed.ls_link")) {
-                        logger.trace("Parsing ls_link message");
-                        ls_link_msg_count++;
+                            continue;
 
-                        LsLink ls = new LsLink(message.getContent());
-                        dbQuery = new LsLinkQuery(ls.records);
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("peer"))
+                                || record.topic().equals("openbmp.parsed.peer")) {
+                            /*
+                             * DB is updated directly within this thread
+                             */
+                            logger.trace("Parsing peer message");
+                            peer_msg_count++;
 
-                    } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_prefix"))
-                            || record.topic().equals("openbmp.parsed.ls_prefix")) {
-                        logger.trace("Parsing ls_prefix message");
-                        ls_prefix_msg_count++;
+                            Peer peer = new org.openbmp.api.parsed.processor.Peer(message.getContent());
+                            PeerQuery peerQuery = new PeerQuery(peer.records);
 
-                        LsPrefix ls = new LsPrefix(message.getContent());
-                        dbQuery = new LsPrefixQuery(ls.records);
+                            if (peerQuery != null) {
 
-                    } else {
-                        logger.debug("Topic %s not implemented, ignoring", record.topic());
-                        continue;
-                    }
+                                // Add/update peers
+                                db.updateQuery(create_sql_string(peerQuery), cfg.getDb_retries());
 
-                    /*
-                     * Add query to writer queue
-                     */
-                    if (dbQuery != null) {
-                        addBulkQuerytoWriter(record.key(), dbQuery.genInsertStatement(),
-                                dbQuery.genValuesStatement(), thread_type);
+                                consumer.poll(Duration.ofMillis(0));       // heartbeat
+
+                                // Update rib tables based on peer
+                                for (String sql : peerQuery.genRibPeerUpdate()) {
+                                    logger.debug("Updating NLRI's for peer change: %s", sql);
+
+                                    db.updateQuery(sql, cfg.getDb_retries());
+
+                                    consumer.poll(Duration.ofMillis(0)); // heartbeat
+                                }
+                            }
+
+                            continue;
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("base_attribute"))
+                                || record.topic().equals("openbmp.parsed.base_attribute")) {
+                            logger.trace("Parsing base_attribute message");
+                            base_attribute_msg_count++;
+
+                            //thread_type = ThreadType.THREAD_ATTRIBUTES;
+
+                            List<BaseAttributePojo> ba_list = new ArrayList();
+                            BaseAttribute ba_temp = new org.openbmp.api.parsed.processor.BaseAttribute(message.getContent());
+
+                            // Cache in memory processed base attributes.  If processed, skip adding it to the DB again
+                            for (BaseAttributePojo ba_entry : ba_temp.records) {
+                                if (processed_attr.containsKey(ba_entry.getHash())) {
+                                    processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
+                                    continue;
+
+                                } else {
+                                    processed_attr.put(ba_entry.getHash(), System.currentTimeMillis());
+                                    ba_list.add(ba_entry);
+                                }
+                            }
+
+                            if (ba_list.size() <= 0)
+                                continue;
+
+                            dbQuery = new BaseAttributeQuery(ba_list);
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("unicast_prefix"))
+                                || record.topic().equals("openbmp.parsed.unicast_prefix")) {
+                            logger.trace("Parsing unicast_prefix message");
+                            unicast_prefix_msg_count++;
+
+                            UnicastPrefix up = new UnicastPrefix(message.getContent());
+                            dbQuery = new UnicastPrefixQuery(up.records);
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("l3vpn"))
+                                || record.topic().equals("openbmp.parsed.l3vpn")) {
+                            logger.trace("Parsing L3VPN prefix message");
+                            l3vpn_prefix_msg_count++;
+
+                            L3VpnPrefix vp = new L3VpnPrefix(message.getContent());
+                            dbQuery = new L3VpnPrefixQuery(vp.records);
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("bmp_stat"))
+                                || record.topic().equals("openbmp.parsed.bmp_stat")) {
+                            logger.trace("Parsing bmp_stat message");
+                            stat_msg_count++;
+
+                            obj = new BmpStat(message.getContent());
+                            dbQuery = new BmpStatQuery(obj.getRowMap());
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_node"))
+                                || record.topic().equals("openbmp.parsed.ls_node")) {
+                            logger.trace("Parsing ls_node message");
+                            ls_node_msg_count++;
+
+                            LsNode ls = new LsNode(message.getContent());
+                            dbQuery = new LsNodeQuery(ls.records);
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_link"))
+                                || record.topic().equals("openbmp.parsed.ls_link")) {
+                            logger.trace("Parsing ls_link message");
+                            ls_link_msg_count++;
+
+                            LsLink ls = new LsLink(message.getContent());
+                            dbQuery = new LsLinkQuery(ls.records);
+
+                        } else if ((message.getType() != null && message.getType().equalsIgnoreCase("ls_prefix"))
+                                || record.topic().equals("openbmp.parsed.ls_prefix")) {
+                            logger.trace("Parsing ls_prefix message");
+                            ls_prefix_msg_count++;
+
+                            LsPrefix ls = new LsPrefix(message.getContent());
+                            dbQuery = new LsPrefixQuery(ls.records);
+
+                        } else {
+                            logger.debug("Topic %s not implemented, ignoring", record.topic());
+                            continue;
+                        }
+
+                        /*
+                         * Add query to writer queue
+                         */
+                        if (dbQuery != null) {
+                            addBulkQuerytoWriter(record.key(), dbQuery.genInsertStatement(),
+                                    dbQuery.genValuesStatement(), thread_type);
+                        }
+
+                    } catch (Exception ex) {
+                        // ignore
                     }
                 }
 
@@ -959,6 +964,7 @@ public class ConsumerRunnable implements Runnable {
                 WriterObject wobj = getWriter(qmsg);
 
                 // Skip any writers that are currently busy by putting the message back
+                // TODO: This can cause out or order messages - Remove/Fix/Update
                 if (busy_writers.contains(wobj.writerThread) == true) {
                     message_queue.offer(qmsg);
                 }

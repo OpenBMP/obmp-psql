@@ -294,6 +294,8 @@ CREATE INDEX ON base_attrs USING GIN  (community_list array_ops);
 CREATE INDEX ON base_attrs USING GIN  (ext_community_list array_ops);
 CREATE INDEX ON base_attrs USING GIN  (large_community_list array_ops);
 CREATE INDEX ON base_attrs (peer_hash_id);
+CREATE INDEX ON base_attrs (next_hop);
+
 
 ALTER TABLE base_attrs SET (autovacuum_analyze_threshold = 1000);
 ALTER TABLE base_attrs SET (autovacuum_vacuum_threshold = 2000);
