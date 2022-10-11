@@ -101,7 +101,7 @@ public class LsLinkQuery extends Query {
             sb.append(pojo.getRemote_link_id()); sb.append(',');
             sb.append('\''); sb.append(pojo.getLocal_node_hash()); sb.append("'::uuid,");
             sb.append('\''); sb.append(pojo.getRemote_node_hash()); sb.append("'::uuid,");
-            sb.append(pojo.getAdmin_group()); sb.append(',');
+            sb.append(pojo.getAdmin_group()); sb.append("::bigint");
             sb.append(pojo.getMax_link_bw()); sb.append(',');
             sb.append(pojo.getMax_resv_bw()); sb.append(',');
             sb.append('\''); sb.append(pojo.getUnreserved_bw()); sb.append("',");
