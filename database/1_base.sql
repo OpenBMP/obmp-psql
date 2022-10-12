@@ -605,7 +605,7 @@ CREATE TABLE ls_links_log (
 	  admin_group             bigint              NOT NULL,
 	  max_link_bw             bigint,
 	  max_resv_bw             bigint,
-	  unreserved_bw           varchar(60),
+	  unreserved_bw           varchar(128),
 	  te_def_metric           bigint,
 	  protection_type         varchar(60),
 	  mpls_proto_mask         ls_mpls_proto_mask,
