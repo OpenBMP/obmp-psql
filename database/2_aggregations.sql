@@ -6,79 +6,49 @@
 -- -----------------------------------------------------------------------
 
 -- advertisement and withdrawal changes by peer
-DROP TABLE IF EXISTS stats_chg_bypeer CASCADE;
+DROP TABLE IF EXISTS stats_chg_bypeer
 CREATE TABLE stats_chg_bypeer (
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	peer_hash_id            uuid                NOT NULL,
-	updates                 bigint              NOT NULL DEFAULT 0,
-	withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	peer_hash_id            UUID,
+	updates                 UInt64 DEFAULT 0,
+	withdraws               UInt64 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
-CREATE UNIQUE INDEX ON stats_chg_bypeer (interval_time,peer_hash_id);
-CREATE INDEX ON stats_chg_bypeer (peer_hash_id);
-
--- convert to timescaledb
-SELECT create_hypertable('stats_chg_bypeer', 'interval_time', chunk_time_interval => interval '6 hours');
-
-ALTER TABLE stats_chg_bypeer SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'peer_hash_id'
-	);
-
-SELECT add_retention_policy('stats_chg_bypeer', INTERVAL '4 weeks');
-SELECT add_compression_policy('stats_chg_bypeer', INTERVAL '2 days');
 
 -- advertisement and withdrawal changes by asn
-DROP TABLE IF EXISTS stats_chg_byasn CASCADE;
+DROP TABLE IF EXISTS stats_chg_byasn
 CREATE TABLE stats_chg_byasn (
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	peer_hash_id            uuid                NOT NULL,
-	origin_as               bigint              NOT NULL,
-	updates                 bigint              NOT NULL DEFAULT 0,
-	withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries ;
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	peer_hash_id            UUID,
+	origin_as               UInt64,
+	updates                 UInt64 DEFAULT 0,
+	withdraws               UInt64 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
-CREATE UNIQUE INDEX ON stats_chg_byasn (interval_time,peer_hash_id,origin_as);
-CREATE INDEX ON stats_chg_byasn (peer_hash_id);
-CREATE INDEX ON stats_chg_byasn (origin_as);
-
--- convert to timescaledb
-SELECT create_hypertable('stats_chg_byasn', 'interval_time', chunk_time_interval => interval '6 hours');
-
-ALTER TABLE stats_chg_byasn SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'peer_hash_id,origin_as'
-	);
-
-SELECT add_compression_policy('stats_chg_byasn', INTERVAL '2 days');
-SELECT add_retention_policy('stats_chg_byasn', INTERVAL '4 weeks');
 
 -- advertisement and withdrawal changes by prefix
-DROP TABLE IF EXISTS stats_chg_byprefix CASCADE;
+DROP TABLE IF EXISTS stats_chg_byprefix
 CREATE TABLE stats_chg_byprefix (
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	peer_hash_id            uuid                NOT NULL,
-	prefix                  inet                NOT NULL,
-	prefix_len              smallint            NOT NULL,
-	updates                 bigint              NOT NULL DEFAULT 0,
-	withdraws               bigint              NOT NULL DEFAULT 0
-) WITH (autovacuum_enabled = false) TABLESPACE timeseries;
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	peer_hash_id            UUID,
+	prefix                  String,
+	prefix_len              UInt16,
+	updates                 UInt64 DEFAULT 0,
+	withdraws               UInt64 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
-CREATE UNIQUE INDEX ON stats_chg_byprefix (interval_time,peer_hash_id,prefix);
-CREATE INDEX ON stats_chg_byprefix (peer_hash_id);
-CREATE INDEX ON stats_chg_byprefix (prefix);
-
-
--- convert to timescaledb
-SELECT create_hypertable('stats_chg_byprefix', 'interval_time', chunk_time_interval => interval '6 hours');
-
-ALTER TABLE stats_chg_byprefix SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'peer_hash_id,prefix'
-	);
-
-SELECT add_compression_policy('stats_chg_byprefix', INTERVAL '2 days');
-SELECT add_retention_policy('stats_chg_byprefix', INTERVAL '4 weeks');
 
 --
 -- Function to update the change stats tables (bypeer, byasn, and byprefix).
@@ -133,32 +103,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Origin ASN stats
-DROP TABLE IF EXISTS stats_ip_origins CASCADE;
+DROP TABLE IF EXISTS stats_ip_origins
 CREATE TABLE stats_ip_origins (
-	id                      bigserial           NOT NULL,
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	asn                     bigint              NOT NULL,
-	v4_prefixes             int                 NOT NULL DEFAULT 0,
-	v6_prefixes             int                 NOT NULL DEFAULT 0,
-	v4_with_rpki            int                 NOT NULL DEFAULT 0,
-	v6_with_rpki            int                 NOT NULL DEFAULT 0,
-	v4_with_irr             int                 NOT NULL DEFAULT 0,
-	v6_with_irr             int                 NOT NULL DEFAULT 0
-) TABLESPACE timeseries;
+	id                      Float64 DEFAULT (toFloat64(toDateTime64(now64(), 3)) + toFloat64(timestamp)) - 3200000000 CODEC(Gorilla, Default),
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	asn                     UInt64,
+	v4_prefixes             UInt32 DEFAULT 0,
+	v6_prefixes             UInt32 DEFAULT 0,
+	v4_with_rpki            UInt32 DEFAULT 0,
+	v6_with_rpki            UInt32 DEFAULT 0,
+	v4_with_irr             UInt32 DEFAULT 0,
+	v6_with_irr             UInt32 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
-CREATE UNIQUE INDEX ON stats_ip_origins (interval_time,asn);
-
-
--- convert to timescaledb
-SELECT create_hypertable('stats_ip_origins', 'interval_time', chunk_time_interval => interval '1 month');
-
-ALTER TABLE stats_ip_origins SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'asn'
-	);
-
-SELECT add_compression_policy('stats_ip_origins', INTERVAL '2 days');
-SELECT add_retention_policy('stats_ip_origins', INTERVAL '4 weeks');
 
 --
 -- Function to purge old withdrawn prefixes
@@ -390,28 +351,17 @@ $$ LANGUAGE plpgsql;
 
 
 -- Peer rib counts
-DROP TABLE IF EXISTS stats_peer_rib CASCADE;
+DROP TABLE IF EXISTS stats_peer_rib
 CREATE TABLE stats_peer_rib (
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	peer_hash_id            uuid                NOT NULL,
-	v4_prefixes             int                 NOT NULL DEFAULT 0,
-	v6_prefixes             int                 NOT NULL DEFAULT 0
-) TABLESPACE timeseries;
-
-CREATE UNIQUE INDEX ON stats_peer_rib (interval_time,peer_hash_id);
-CREATE INDEX ON stats_peer_rib (peer_hash_id);
-
-
--- convert to timescaledb
-SELECT create_hypertable('stats_peer_rib', 'interval_time', chunk_time_interval => interval '1 month');
-
-ALTER TABLE stats_peer_rib SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'peer_hash_id'
-	);
-
-SELECT add_compression_policy('stats_peer_rib', INTERVAL '2 days');
-SELECT add_retention_policy('stats_peer_rib', INTERVAL '4 weeks');
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	peer_hash_id            UUID,
+	v4_prefixes             UInt32 DEFAULT 0,
+	v6_prefixes             UInt32 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
 
 --
@@ -436,32 +386,21 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Peer past updates counts
-DROP TABLE IF EXISTS stats_peer_update_counts CASCADE;
+DROP TABLE IF EXISTS stats_peer_update_counts
 CREATE TABLE stats_peer_update_counts (
-	interval_time           timestamp(6)        without time zone NOT NULL,
-	peer_hash_id            uuid                NOT NULL,
-	advertise_avg           int                 NOT NULL DEFAULT 0,
-	advertise_min           int                 NOT NULL DEFAULT 0,
-	advertise_max           int                 NOT NULL DEFAULT 0,
-	withdraw_avg            int                 NOT NULL DEFAULT 0,
-	withdraw_min            int                 NOT NULL DEFAULT 0,
-	withdraw_max            int                 NOT NULL DEFAULT 0
-) TABLESPACE timeseries;
-
-CREATE UNIQUE INDEX ON stats_peer_update_counts (interval_time,peer_hash_id);
-CREATE INDEX ON stats_peer_update_counts (peer_hash_id);
-
-
--- convert to timescaledb
-SELECT create_hypertable('stats_peer_update_counts', 'interval_time', chunk_time_interval => interval '1 month');
-
-ALTER TABLE stats_peer_update_counts SET (
-	timescaledb.compress,
-	timescaledb.compress_segmentby = 'peer_hash_id'
-	);
-
-SELECT add_compression_policy('stats_peer_update_counts', INTERVAL '2 days');
-SELECT add_retention_policy('stats_peer_update_counts', INTERVAL '4 weeks');
+	interval_time           DateTime CODEC(DoubleDelta, NONE),
+	peer_hash_id            UUID,
+	advertise_avg           UInt32 DEFAULT 0,
+	advertise_min           UInt32 DEFAULT 0,
+	advertise_max           UInt32 DEFAULT 0,
+	withdraw_avg            UInt32 DEFAULT 0,
+	withdraw_min            UInt32 DEFAULT 0,
+	withdraw_max            UInt32 DEFAULT 0
+)
+ENGINE = MergeTree
+PARTITION BY toStartOfDay(interval_time)
+ORDER BY interval_time
+TTL interval_time + toIntervalDay(30)
 
 
 --
