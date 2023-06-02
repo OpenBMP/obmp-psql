@@ -15,16 +15,6 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 
 -- -----------------------------------------------------
--- Enums used in tables
--- -----------------------------------------------------
--- DROP TYPE  IF EXISTS opState CASCADE;
-CREATE TYPE opState as enum ('up', 'down', '');
-CREATE TYPE user_role as enum ('admin', 'oper', '');
-CREATE TYPE ls_proto as enum ('IS-IS_L1', 'IS-IS_L2', 'OSPFv2', 'Direct', 'Static', 'OSPFv3', '');
-CREATE TYPE ospf_route_type as enum ('Intra','Inter','Ext-1','Ext-2','NSSA-1','NSSA-2','');
-CREATE TYPE ls_mpls_proto_mask as enum('LDP', 'RSVP-TE', '');
-
--- -----------------------------------------------------
 -- Tables and base, non dependant functions
 -- -----------------------------------------------------
 
@@ -473,7 +463,7 @@ CREATE TABLE ls_links (
 	  unreserved_bw           Nullable(String),
 	  te_def_metric           Nullable(UInt64),
 	  protection_type         Nullable(String),
-	  mpls_proto_mask         ls_mpls_proto_mask,
+	  mpls_proto_mask         Enum8('LDP' = 1, 'RSVP-TE' = 2, '' = 3),
 	  igp_metric              UInt64 DEFAULT 0,
 	  srlg                    Nullable(String),
 	  name                    Nullable(String),
@@ -516,7 +506,7 @@ CREATE TABLE ls_links_log (
 	  unreserved_bw           Nullable(String),
 	  te_def_metric           Nullable(UInt64),
 	  protection_type         Nullable(String),
-	  mpls_proto_mask         ls_mpls_proto_mask,
+	  mpls_proto_mask         Enum8('LDP' = 1, 'RSVP-TE' = 2, '' = 3),
 	  igp_metric              UInt64 DEFAULT 0,
 	  srlg                    Nullable(String),
 	  name                    Nullable(String),
