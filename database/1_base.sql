@@ -4,15 +4,6 @@
 -- BEGIN Base Schema
 -- -----------------------------------------------------------------------
 
--- SET TIME ZONE 'UTC';
-
--- Enable https://www.postgresql.org/docs/10/pgtrgm.html type of indexes
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
--- btree_gist allows hash,prefix indexes, but this will cause normal gist
---    indexes to perform slower.
--- CREATE EXTENSION IF NOT EXISTS btree_gist;
-
 
 -- -----------------------------------------------------
 -- Tables and base, non dependant functions
