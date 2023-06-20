@@ -250,7 +250,7 @@ def walkWhois(db, asnList):
         # If not found via whois, try DNS
         if 'as_name' not in record:
             try:
-                answers = dns.resolver.query("AS%d.asn.cymru.com" % asn, 'TXT')
+                answers = dns.resolver.resolve("AS%d.asn.cymru.com" % asn, 'TXT')
                 if len(answers) >= 1:
                     txt = str(answers[0]).split("|")
                     if len(txt) >= 5:
