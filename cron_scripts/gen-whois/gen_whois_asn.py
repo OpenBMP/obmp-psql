@@ -208,7 +208,7 @@ def whois(asn, host):
     WHOIS_CMD = ["whois", "-h", host, "AS%s" % asn]
 
     proc = subprocess.Popen(WHOIS_CMD,
-                            stdout= subprocess.PIPE, stdin=None)
+                            stdout=subprocess.PIPE, stdin=None)
 
     output = (proc.stdout.read()).decode("utf-8", "ignore")
     proc.communicate()
