@@ -33,11 +33,13 @@ class dbHandler:
         """
          Connect to database
         """
-        try:
-            self.conn = py.connect(user=user, password=pw,
-                               host=host,
-                               database=database)
+        self.user = user
+        self.pw = pw
+        self.host = host
+        self.database = database
 
+        try:
+            self.conn = py.connect(f"clickhouse://{self.user}:{self.pw}@{self.host}/{self.database}?max_query_size=1048576"
             self.cursor = self.conn.cursor()
 
         except (py.ProgrammingError) as err:
