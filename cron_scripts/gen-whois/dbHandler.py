@@ -1,147 +1,177 @@
-# Connection handle
-conn=""
+#!/usr/bin/env python3
+"""
+  Copyright (c) 2021 Cisco Systems, Inc. and Tim Evens.  All rights reserved.
 
-# Cursor handle
-cursor=""
+  This program and the accompanying materials are made available under the
+  terms of the Eclipse Public License v1.0 which accompanies this distribution,
+  and is available at http://www.eclipse.org/legal/epl-v10.html
 
-# Last query time in seconds (floating point)
-last_query_time=0
+  .. moduleauthor:: Tim Evens <tim@evensweb.com>
+"""
+import clickhouse_driver as py
+from time import time
 
-# Connect to database
-connectDb() {
-    local user=$1
-    local pw=$2
-    local host=$3
-    local database=$4
+class dbHandler:
+    """ Database handler class
 
-    # Connect to the database
-    conn=$(psql -U "$user" -W "$pw" -h "$host" -d "$database" 2>&1)
+        This class handles the database access methods.
+    """
 
-    # Check if the connection was successful
-    if [[ "$conn" == *"psql: FATAL:"* ]]; then
-        echo "ERROR: Connect failed: $conn"
-        exit 1
-    fi
+    #: Connection handle
+    conn = None
 
-    # Create a cursor
-    cursor=$(psql -U "$user" -W "$pw" -h "$host" -d "$database" -c "" 2>&1)
+    #: Cursor handle
+    cursor = None
 
-    # Check if the cursor was created successfully
-    if [[ "$cursor" == *"psql: FATAL:"* ]]; then
-        echo "ERROR: Failed to create cursor: $cursor"
-        exit 1
-    fi
-}
+    #: Last query time in seconds (floating point)
+    last_query_time = 0
 
-# Close the database connection
-close() {
-    # Close the cursor
-    if [[ -n "$cursor" ]]; then
-        psql -c "" "$cursor" >/dev/null 2>&1
-        cursor=""
-    fi
+    def __init__(self):
+        pass
 
-    # Close the connection
-    if [[ -n "$conn" ]]; then
-        psql -c "" "$conn" >/dev/null 2>&1
-        conn=""
-    fi
-}
+    def connectDb(self, user, pw, host, database):
+        """
+         Connect to database
+        """
+        try:
+            self.conn = py.connect(user=user, password=pw,
+                               host=host,
+                               database=database)
 
-# Create table schema
-createTable() {
-    local tableName=$1
-    local tableSchema=$2
-    local dropIfExists=$3
+            self.cursor = self.conn.cursor()
 
-    # Check if the cursor is available
-    if [[ -z "$cursor" ]]; then
-        echo "ERROR: Looks like psql is not connected, try to reconnect."
-        return 1
-    fi
+        except (py.ProgrammingError) as err:
+            print("ERROR: Connect failed: " + str(err))
+            raise err
 
-    # Drop the table if it exists
-    if [[ "$dropIfExists" == "true" ]]; then
-        psql -c "DROP TABLE IF EXISTS $tableName" "$cursor" >/dev/null 2>&1
-    fi
+    def close(self):
+        """ Close the database connection """
+        if (self.cursor):
+            self.cursor.close()
+            self.cursor = None
 
-    # Create the table
-    psql -c "$tableSchema" "$cursor" >/dev/null 2>&1
+        if (self.conn):
+            self.conn.close()
+            self.conn = None
 
-    # Check if the table was created successfully
-    if [[ $? -ne 0 ]]; then
-        echo "ERROR: Failed to create table"
-        return 1
-    fi
+    def dropTable(self, tableName, tableSchema, dropIfExists = True):
+        """ Drop table schema
 
-    return 0
-}
+            :param tablename:    The table name that is being created
+            :param tableSchema:  Drop table syntax as it would be to drop it in SQL
+            :param dropIfExists: True to drop the table, false to not drop it.
 
-# Run a query and return the result set back
-#  arg query:       The query to run - should be a working SELECT statement
-#  arg queryParams: Dictionary of parameters to supply to the query for
-#                   variable substitution
-#  return:          Returns "1" if error, otherwise array list of rows
-query() {
-    local query=$1
-    local queryParams=$2
+            :return: True if the table successfully was created, false otherwise
+        """
+        if (not self.cursor):
+            print("ERROR: Looks like clickhouse-client is not connected, try to reconnect.")
+            return False
 
-    # Check if the cursor is available
-    if [[ -z "$cursor" ]]; then
-        echo "ERROR: Looks like psql is not connected, try to reconnect"
-        return 1
-    fi
+        try:
+            if (dropIfExists == True):
+               self.cursor.execute("DROP TABLE IF EXISTS %s" % tableName)
 
-    # Execute the query
-    local startTime=$(date +%s.%N)
-    if [[ -n "$queryParams" ]]; then
-        psql -c "$(printf "$query" "$queryParams")" "$cursor" >/dev/null 2>&1
-    else
-        psql -c "$query" "$cursor" >/dev/null 2>&1
-    fi
-    local endTime=$(date +%s.%N)
+            self.cursor.execute(tableSchema)
 
-    # Calculate the query execution time
-    last_query_time=$(echo "$endTime - $startTime" | bc -l)
+        except py.ProgrammingError as err:
+            print("ERROR: Failed to drop table - " + str(err))
+            #raise err
 
-    # Fetch the query results
-    local rows=$(psql -c "FETCH 10000 FROM $cursor" "$cursor" 2>/dev/null)
 
-    # Check if there are more rows to fetch
-    while [[ -n "$rows" ]]; do
-        echo "$rows"
-        rows=$(psql -c "FETCH 10000 FROM $cursor" "$cursor" 2>/dev/null)
-    done
+        return True
 
-    return 0
-}
+    def createTable(self, tableName, tableSchema, createIfExists = True):
+        """ Create table schema
 
-# Runs a query that would normally not have any results, such as insert, update, delete
-#  arg query:       The query to run - should be a working INSERT or UPDATE statement
-#  arg queryParams: Dictionary of parameters to supply to the query for
-#                   variable substitution
-#  return:          Returns "0" if successful, "1" if not
-queryNoResults() {
-    local query=$1
-    local queryParams=$2
+            :param tablename:    The table name that is being created
+            :param tableSchema:  Create table syntax as it would be to create it in SQL
+            :param createIfExists: True to drop the table, false to not drop it.
 
-    # Check if the cursor is available
-    if [[ -z "$cursor" ]]; then
-        echo "ERROR: Looks like psql is not connected, try to reconnect"
-        return 1
-    fi
+            :return: True if the table successfully was created, false otherwise
+        """
+        if (not self.cursor):
+            print("ERROR: Looks like clickhouse-client is not connected, try to reconnect.")
+            return False
 
-    # Execute the query
-    local startTime=$(date +%s.%N)
-    if [[ -n "$queryParams" ]]; then
-        psql -c "$(printf "$query" "$queryParams")" "$cursor" >/dev/null 2>&1
-    else
-        psql -c "$query" "$cursor" >/dev/null 2>&1
-    fi
-    local endTime=$(date +%s.%N)
+        try:
+            if (createIfExists == True):
+               self.cursor.execute("CREATE TABLE IF EXISTS %s" % tableName)
 
-    # Calculate the query execution time
-    last_query_time=$(($endTime - $startTime))
+            self.cursor.execute(tableSchema)
 
-    return 0
-}
+        except py.ProgrammingError as err:
+            print("ERROR: Failed to create table - " + str(err))
+            #raise err
+            return False
+
+        return True
+
+    def query(self, query, queryParams=None):
+        """ Run a query and return the result set back
+
+            :param query:       The query to run - should be a working SELECT statement
+            :param queryParams: Dictionary of parameters to supply to the query for
+                                variable substitution
+
+            :return: Returns "None" if error, otherwise array list of rows
+        """
+        if (not self.cursor):
+            print("ERROR: Looks like clickhouse-client is not connected, try to reconnect")
+            return None
+
+        try:
+            startTime = time()
+
+            if (queryParams):
+                self.cursor.execute(query % queryParams)
+            else:
+                self.cursor.execute(query)
+
+            self.last_query_time = time() - startTime
+
+            rows = []
+
+            while (True):
+                result = self.cursor.fetchmany(size=10000)
+                if (len(result) > 0):
+                    rows += result
+                else:
+                    break
+
+            return rows
+
+        except py.ProgrammingError as err:
+            print("ERROR: query failed - " + str(err))
+            return None
+
+    def queryNoResults(self, query, queryParams=None):
+        """ Runs a query that would normally not have any results, such as insert, update, delete
+
+            :param query:       The query to run - should be a working INSERT or UPDATE statement
+            :param queryParams: Dictionary of parameters to supply to the query for
+                                variable substitution
+
+            :return: Returns True if successful, false if not.
+        """
+        if (not self.cursor):
+            print("ERROR: Looks like clickhouse-client is not connected, try to reconnect")
+            return None
+
+        try:
+            startTime = time()
+
+            if (queryParams):
+                self.cursor.execute(query % queryParams)
+            else:
+                self.cursor.execute(query)
+
+            self.conn.commit()
+
+            self.last_query_time = time() - startTime
+
+            return True
+
+        except py.ProgrammingError as err:
+            print("ERROR: query failed - " + str(err))
+            #print("   QUERY: %s", query)
+            return None
