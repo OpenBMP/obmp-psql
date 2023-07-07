@@ -212,17 +212,17 @@ def import_dbip_csv(db, in_file):
     return True
 
 @click.command(context_settings=dict(help_option_names=['--help'], max_content_width=200))
-@click.option('-h', '--pghost', 'pghost', envvar='PGHOST',
-              help="Postgres hostname",
+@click.option('-h', '--host', 'host', envvar='HOST',
+              help="Clickhouse hostname",
               metavar="<string>", default="localhost")
-@click.option('-u', '--pguser', 'pguser', envvar='PGUSER',
-              help="Postgres User",
+@click.option('-u', '--user', 'user', envvar='USER',
+              help="Clickhouse User",
               metavar="<string>", default="openbmp")
-@click.option('-p', '--pgpassword', 'pgpassword', envvar='PGPASSWORD',
-              help="Postgres Password",
+@click.option('-p', '--password', 'password', envvar='PASSWORD',
+              help="Clickhouse Password",
               metavar="<string>", default="openbmp")
-@click.option('-d', '--pgdatabase', 'pgdatabase', envvar='PGDATABASE',
-              help="Postgres Database name",
+@click.option('-d', '--database', 'database', envvar='DATABASE',
+              help="Clickhouse Database name",
               metavar="<string>", default="openbmp")
 @click.option('--db_ip_file', 'db_ip_file',
               help="DB-IP CSV DB-IP City Lite filename",
@@ -239,8 +239,8 @@ def import_dbip_csv(db, in_file):
 # @click.option('-f', '--flush', 'flush_routes',
 #               help="Flush routing table(s) at startup",
 #               is_flag=True, default=False)
-def main(pghost, pguser, pgpassword, pgdatabase, db_ip_file, mm_loc_file, mm_ipv4_file, mm_ipv6_file):
-    db = dbHandler()
+def main(host, user, password, database, db_ip_file, mm_loc_file, mm_ipv4_file, mm_ipv6_file):
+    db = dbHandler.dbHandler()
 
     success = True
 
@@ -251,7 +251,7 @@ def main(pghost, pguser, pgpassword, pgdatabase, db_ip_file, mm_loc_file, mm_ipv
             LOG.fatal(f"CSV file '{db_ip_file}' does not exist, cannot continue")
             exit(1)
 
-        db.connectDb(pguser, pgpassword, pghost, pgdatabase)
+        db.connectDb(user, password, host, database)
 
         success = import_dbip_csv(db, db_ip_file)
 
@@ -270,7 +270,7 @@ def main(pghost, pguser, pgpassword, pgdatabase, db_ip_file, mm_loc_file, mm_ipv
 
         LOG.info("Importing MaxMind GeoIP2 City Lite files ...")
 
-        db.connectDb(pguser, pgpassword, pghost, pgdatabase)
+        db.connectDb(user, password, host, database)
 
         success = import_maxmind_csv(db, mm_loc_file, mm_ipv4_file, mm_ipv6_file)
 
