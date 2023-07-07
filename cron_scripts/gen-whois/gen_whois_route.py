@@ -182,17 +182,17 @@ def add_route_to_db(db, record, commit=False):
     """
     # Add entry to queue
     if (len(record) > 4):
-        bulk_insert_queue.append("('%s/%d'::inet,%d,%u,'%s', '%s')" % (record['prefix'], record['prefix_len'],
-                                                                       record['prefix_len'],
-                                                                       record['origin_as'],
-                                                                       record['descr'][:254],
-                                                                       record['source']))
+        bulk_insert_queue.append("('%s',%d,%u,'%s','%s')" % (record['prefix'],
+                                                             record['prefix_len'],
+                                                             record['origin_as'],
+                                                             record['descr'][:254],
+                                                             record['source']))
 
     # Insert/commit the queue if commit is True or if reached max queue size
     if ((commit == True or len(bulk_insert_queue) > MAX_BULK_INSERT_QUEUE_SIZE) and
             len(bulk_insert_queue)):
         query = "INSERT INTO info_route (prefix,prefix_len,origin_as,descr,source) "
-        query += " SELECT DISTINCT ON (prefix,origin_as) * FROM ( VALUES "
+        query += " WITH [ "
 
 
         # try:
@@ -207,9 +207,9 @@ def add_route_to_db(db, record, commit=False):
         if (query.endswith(',')):
             query = query[:-1]
 
-        query += " ) t(prefix,prefix_len,origin_as,descr,source) " # add order by if needed
-        query += " ON CONFLICT (prefix,prefix_len,origin_as) DO UPDATE SET "
-        query += "   descr=excluded.descr, source=excluded.source, timestamp=now()"
+        query += " ] AS rows_array, arrayJoin(rows_array) AS row_tuple "
+        query += " SELECT  DISTINCT ON (column1,column3) row_tuple.1 column1, row_tuple.2 column2, "
+        query += " row_tuple.3 column3, row_tuple.4 column4, row_tuple.5 column5 "
 
         # print "QUERY = %s" % query
         # print "----------------------------------------------------------------"
