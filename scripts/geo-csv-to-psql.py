@@ -34,12 +34,6 @@ LOG = logging.getLogger("geo-csv-to-psql")
 SQL_INSERT = ("INSERT INTO geo_ip (family,ip,city,stateprov,country,latitude,longitude,"
               "timezone_offset, timezone_name, isp_name) VALUES ")
 
-SQL_CONFLICT = (" ON CONFLICT (ip) DO UPDATE SET "
-                " city=excluded.city, stateprov=excluded.stateprov,"
-                " timezone_offset=excluded.timezone_offset,"
-                " timezone_name=excluded.timezone_name,"
-                " country=excluded.country, latitude=excluded.latitude, longitude=excluded.longitude;")
-
 
 def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
     """
@@ -125,10 +119,10 @@ def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
                     LOG.info(f"Inserting {count} records, line count {line_count}")
 
                     try:
-                        db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                        db.queryNoResults(SQL_INSERT + sql_values)
                     except:
                         LOG.error("Trying to insert again due to exception")
-                        db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                        db.queryNoResults(SQL_INSERT + sql_values)
 
                     sql_values = ""
                     count = 0
@@ -137,10 +131,10 @@ def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
             if len(sql_values) > 0:
                 try:
                     LOG.info(f"Inserting last batch, count {count}, line count {line_count}")
-                    db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                    db.queryNoResults(SQL_INSERT + sql_values)
                 except:
                     LOG.error("Trying to insert again due to exception")
-                    db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                    db.queryNoResults(SQL_INSERT + sql_values)
 
     return True
 
@@ -191,10 +185,10 @@ def import_dbip_csv(db, in_file):
                 LOG.info(f"Inserting {count} records, total {total_count}, line count {line_count}")
 
                 try:
-                    db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                    db.queryNoResults(SQL_INSERT + sql_values)
                 except:
                     LOG.error("Trying to insert again due to exception")
-                    db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                    db.queryNoResults(SQL_INSERT + sql_values)
 
                 sql_values = ""
                 count = 0
@@ -204,10 +198,10 @@ def import_dbip_csv(db, in_file):
             total_count += count
             try:
                 LOG.info(f"Inserting last batch, count {count}, total {total_count}, line count {line_count}")
-                db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                db.queryNoResults(SQL_INSERT + sql_values)
             except:
                 LOG.error("Trying to insert again due to exception")
-                db.queryNoResults(SQL_INSERT + sql_values + SQL_CONFLICT)
+                db.queryNoResults(SQL_INSERT + sql_values)
 
     return True
 
