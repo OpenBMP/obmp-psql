@@ -208,8 +208,9 @@ def add_route_to_db(db, record, commit=False):
             query = query[:-1]
 
         query += " ] AS rows_array, arrayJoin(rows_array) AS row_tuple "
-        query += " SELECT  DISTINCT ON (column1,column3) row_tuple.1 column1, row_tuple.2 column2, "
-        query += " row_tuple.3 column3, row_tuple.4 column4, row_tuple.5 column5 "
+        query += " SELECT  DISTINCT ON (column1,column2,column3) "
+        query += " row_tuple.1 column1, row_tuple.2 column2, row_tuple.3 column3, "
+        query += " row_tuple.4 column4, row_tuple.5 column5 "
 
         # print "QUERY = %s" % query
         # print "----------------------------------------------------------------"
