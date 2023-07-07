@@ -13,10 +13,7 @@
     NOTE: MaxMind requires a login in order to download the CSV file.  DB-IP does not. DB-IP is therefore
          the default since it doesn't require a login.
 
-  sudo apt install libpq-dev postgresql-common
-  sudo pip3 install psycopg2
-  sudo pip3 install netaddr
-  sudo pip3 install click
+  sudo apt install python3-{click,clickhouse-driver,netaddr}
 """
 import logging
 import click
