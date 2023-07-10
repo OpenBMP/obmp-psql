@@ -26,7 +26,6 @@ from time import time
 def load_export(db, server, rpkiuser, rpkipassword):
     urllib3.disable_warnings()
     query_begin = 'INSERT INTO rpki_validator (prefix, prefix_len, prefix_len_max, origin_as) VALUES '
-    query_end = ' ON CONFLICT (prefix,prefix_len_max,origin_as) DO UPDATE SET timestamp=now()'
 
     # get json data
     data = []
@@ -59,18 +58,18 @@ def load_export(db, server, rpkiuser, rpkipassword):
 
         prefix, prefix_len = prefix_full.split('/')[0], prefix_full.split('/')[1]
 
-        query += "('%s'::inet, %d, %d, %d)" % (prefix_full, int(prefix_len), int(prefix_len_max), int(origin_as))
+        query += "('%s', %d, %d, %d)" % (prefix_full, int(prefix_len), int(prefix_len_max), int(origin_as))
         count += 1
 
         if (count > 200):    # Bulk insert/upset
-            db.queryNoResults(query + query_end)
+            db.queryNoResults(query)
             query = query_begin
             count = 0
 
     # process remaining items in the query
     if query.endswith(','):
         query = query[:-1]
-        db.queryNoResults(query + query_end)
+        db.queryNoResults(query)
 
 
 def parseCmdArgs(argv):
@@ -200,10 +199,6 @@ def main():
     rpkipassword = cfg['rpkipassword']
     load_export(db, server, rpkiuser, rpkipassword);
     print ("Loaded rpki roas")
-
-    # Purge old entries that didn't get updated
-    db.queryNoResults("DELETE FROM rpki_validator WHERE timestamp < now() AT TIME ZONE 'UTC' - interval '1 hour'")
-    print("purged old roas")
 
     print("Done")
 
