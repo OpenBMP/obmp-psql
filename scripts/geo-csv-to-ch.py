@@ -5,7 +5,7 @@
   .. moduleauthor:: Tim Evens <tievens@cisco.com>
 
     This script can be used to import either DB-IP City Lite CSV or MaxMind GeoIP2 City Lite CSV
-    into OBMP postgres DB.
+    into OBMP clickhouse DB.
 
     Ref: DB-IP CSV Lite      - https://db-ip.com/db/download/ip-to-city-lite
          MaxMind Geo2IP Lite - https://dev.maxmind.com/geoip/geolocate-an-ip/databases?lang=en
@@ -34,7 +34,7 @@ SQL_INSERT = ("INSERT INTO geo_ip (family,cidr,cidr_len,city,stateprov,country,l
 
 def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
     """
-    import MaxMind City CSV Lite into OBMP postgres DB
+    import MaxMind City CSV Lite into OBMP clickhouse DB
 
     :param db:          Connected DB handler
     :param mm_loc:      GeoLite2-City-Locations-en.csv
@@ -138,7 +138,7 @@ def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
 
 def import_dbip_csv(db, in_file):
     """
-    import DB-IP CSV Lite Format - https://db-ip.com/db/download/ip-to-city-lite into OBMP Postgres DB
+    import DB-IP CSV Lite Format - https://db-ip.com/db/download/ip-to-city-lite into OBMP Clickhouse DB
 
     :param db:          Connected DB handler
     :param in_file:     DB-IP File to load
