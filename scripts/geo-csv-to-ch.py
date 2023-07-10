@@ -26,7 +26,7 @@ import dbHandler
 
 # Set logger
 logging.basicConfig(format='%(asctime)s | %(levelname)-8s | %(name)s[%(lineno)s] | %(message)s', level=logging.INFO)
-LOG = logging.getLogger("geo-csv-to-psql")
+LOG = logging.getLogger("geo-csv-to-ch")
 
 SQL_INSERT = ("INSERT INTO geo_ip (family,cidr,cidr_len,city,stateprov,country,latitude,longitude,"
               "timezone_offset, timezone_name, isp_name) VALUES ")
