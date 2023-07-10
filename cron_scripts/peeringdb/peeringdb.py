@@ -6,7 +6,7 @@
   .. moduleauthor:: Tim Evens <tievens@cisco.com>
 """
 import click
-import psycopg2 # postgres connector
+import clickhouse_driver # clickhouse connector
 import requests
 import json
 import time # time the sync
@@ -35,32 +35,20 @@ logger = logging.getLogger("OBMP peeringDB:: ")
 MAX_BULK = 1000
 
 # Upsert bulk query
-UPSERT_INFO_ASN = {
+INSERT_INFO_ASN = {
     "insert": "INSERT INTO info_asn (asn, as_name, org_id, org_name, remarks, address, city, state_prov, postal_code, country, source)",
-    "values":  "VALUES ",
-    "conflict": (" ON CONFLICT (asn) DO UPDATE SET "
-                 "   as_name=excluded.as_name,org_id=excluded.org_id,org_name=excluded.org_name,remarks=excluded.remarks,"
-                 "   address=excluded.address,city=excluded.city,state_prov=excluded.state_prov,postal_code=excluded.postal_code,"
-                 "   country=excluded.country,source=excluded.source,timestamp=excluded.timestamp"
-                )
+    "values":  "VALUES "
 }
 
-UPSERT_PDB_IX_PEERS = {
+INSERT_PDB_IX_PEERS = {
     "insert": ("INSERT INTO pdb_exchange_peers (ix_id,ix_name,ix_prefix_v4,ix_prefix_v6,rs_peer,peer_name,peer_ipv4,peer_ipv6,peer_asn,"
                "speed,policy,poc_policy_email,poc_noc_email,ix_city,ix_country,ix_region) "),
-    "values": "VALUES ",
-    "conflict": (" ON CONFLICT (ix_id,peer_ipv4,peer_ipv6) DO UPDATE SET "
-                 "   ix_name=excluded.ix_name, ix_prefix_v4=excluded.ix_prefix_v4,ix_prefix_v6=excluded.ix_prefix_v6,"
-                 "   rs_peer=excluded.rs_peer,peer_name=excluded.peer_name,peer_asn=excluded.peer_asn,"
-                 "   speed=excluded.speed,policy=excluded.policy,"
-                 "   ix_city=excluded.ix_city,ix_country=excluded.ix_country,ix_region=excluded.ix_region,"
-                 "   timestamp=excluded.timestamp"
-                )
+    "values": "VALUES "
 }
 
 
 class apiDb:
-    """ Peering DB API class to import data from Peering DB to OBMP postgres
+    """ Peering DB API class to import data from Peering DB to OBMP clickhouse
     """
 
     #: Connection handle
@@ -89,22 +77,22 @@ class apiDb:
     #: PeeringDB IXs.
     pdb_ix = None
 
-    def __init__(self, pghost, pguser, pgpassword, pgdatabase):
-        self.pghost = pghost
-        self.pguser = pguser
-        self.pgpassword = pgpassword
-        self.pgdatabase = pgdatabase
+    def __init__(self, host, user, password, database):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
 
         self.connect_db()
 
     def connect_db(self):
-        logger.info(f"Connecting to postgres {self.pghost}/{self.pgdatabase}")
+        logger.info(f"Connecting to clickhouse {self.host}/{self.database}")
         # setup DB connection
-        self.conn = psycopg2.connect(database=self.pgdatabase, user=self.pguser,
-                                     password=self.pgpassword, host=self.pghost)
+        self.conn = clickhouse_driver.connect(database=self.database, user=self.user,
+                                     password=self.password, host=self.host)
         self.cursor = self.conn.cursor()
 
-        logger.info(f"Connected to postgres {self.pghost}/{self.pgdatabase}")
+        logger.info(f"Connected to clickhouse {self.host}/{self.database}")
 
     def close_db(self, error=None, query=None):
         if error:
@@ -272,7 +260,7 @@ class apiDb:
         return True
 
     def import_ix_peering(self):
-        """ Import into Postgres the peering inforamtion for each IX """
+        """ Import into Clickhouse the peering inforamtion for each IX """
         logger.info("Begin IX peering import")
 
         if not self.pdb_netixlan or not self.pdb_nets or not self.pdb_pocs or not self.pdb_ix_pfxs:
@@ -338,7 +326,7 @@ class apiDb:
             # bulk update
             if len(values_list) >= MAX_BULK:
                 processed=len(values_list)
-                self.upsert(UPSERT_PDB_IX_PEERS, values_list)
+                self.insert(INSERT_PDB_IX_PEERS, values_list)
                 values_list = []
                 t2=(time.time()-t1)
                 logger.info(f"IX Peer Time: {t2}, number of peers processed: {processed}")
@@ -352,7 +340,7 @@ class apiDb:
 
         # Insert last entries
         if len(values_list) > 0:
-            self.upsert(UPSERT_PDB_IX_PEERS, values_list)
+            self.insert(INSERT_PDB_IX_PEERS, values_list)
             processed=len(values_list)
             t2=(time.time()-t1)
             logger.info(f"Time: {t2}, number of peers processed: {processed}")
@@ -360,7 +348,7 @@ class apiDb:
         logger.info(f"Peering Import from PeeringDB successful: processed: {len(self.pdb_nets)}, time: {t2}")
 
     def import_asn_info(self):
-        """ Import into Postgres the ASN information """
+        """ Import into Clickhouse the ASN information """
         logger.info("Begin ASN import")
 
         if not self.pdb_orgs or not self.pdb_nets:
@@ -405,7 +393,7 @@ class apiDb:
             # bulk update
             if len(values_list) >= MAX_BULK:
                 processed=len(values_list)
-                self.upsert(UPSERT_INFO_ASN, values_list)
+                self.insert(INSERT_INFO_ASN, values_list)
                 values_list = []
                 t2=(time.time()-t1)
                 logger.info(f"Time: {t2}, number of AS processed: {processed}")
@@ -417,63 +405,63 @@ class apiDb:
 
         # Insert last entries
         if len(values_list) > 0:
-            self.upsert(UPSERT_INFO_ASN, values_list)
+            self.insert(INSERT_INFO_ASN, values_list)
             processed=len(values_list)
             t2=(time.time()-t1)
             logger.info(f"ASN Time: {t2}, number of AS processed: {processed}")
 
         logger.info(f"ASN Import from PeeringDB successful: processed: {len(self.pdb_nets)}, time: {t2}")
 
-    def upsert(self, upsert, values_list):
+    def insert(self, insert, values_list):
         try:
             values = ','.join(values_list)
-            upsert_stmt= upsert['insert'] + upsert['values'] + values + upsert['conflict']
+            insert_stmt= insert['insert'] + insert['values'] + values
 
-            logger.debug(f"sql: {upsert_stmt}")
+            logger.debug(f"sql: {insert_stmt}")
 
-            self.cursor.execute (upsert_stmt)
+            self.cursor.execute (insert_stmt)
             self.conn.commit()
-        
-        except (Exception, psycopg2.IntegrityError) as error:
-            self.conn.rollback()
-            logger.error(f"PSQL error: {error}")
-            logger.debug(upsert_stmt)
 
-        except (Exception, psycopg2.DatabaseError) as error:
+        except (Exception, clickhouse_driver.IntegrityError) as error:
             self.conn.rollback()
             logger.error(f"PSQL error: {error}")
-            logger.debug(upsert_stmt)
+            logger.debug(insert_stmt)
+
+        except (Exception, clickhouse_driver.DatabaseError) as error:
+            self.conn.rollback()
+            logger.error(f"PSQL error: {error}")
+            logger.debug(insert_stmt)
 
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help'], max_content_width=200))
-@click.option('-h', '--pghost', 'pghost', envvar='PGHOST',
-              help="Postgres hostname",
+@click.option('-h', '--host', 'host', envvar='HOST',
+              help="Clickhouse hostname",
               metavar="<string>", default="localhost")
-@click.option('-u', '--pguser', 'pguser', envvar='PGUSER',
-              help="Postgres User",
+@click.option('-u', '--user', 'user', envvar='USER',
+              help="Clickhouse User",
               metavar="<string>", default="openbmp")
-@click.option('-p', '--pgpassword', 'pgpassword', envvar='PGPASSWORD',
-              help="Postgres Password",
+@click.option('-p', '--password', 'password', envvar='PASSWORD',
+              help="Clickhouse Password",
               metavar="<string>", default="openbmp")
-@click.option('-d', '--pgdatabase', 'pgdatabase', envvar='PGDATABASE',
-              help="Postgres Database name",
+@click.option('-d', '--database', 'database', envvar='DATABASE',
+              help="Clickhouse Database name",
               metavar="<string>", default="openbmp")
 @click.option('-s', '--sleep', 'sleep_secs',
               help="Randomly sleep to delay connections to peeringdb (default 600)",
               metavar="<int>", default="600")
-def main(pghost, pguser, pgpassword, pgdatabase, sleep_secs):
+def main(host, user, password, database, sleep_secs):
 
     # Add a sleep before connecting to peeringDB
     sleep_rand = randint(10, int(sleep_secs))
     logger.info(f"Random sleep for {sleep_rand} seconds")
     time.sleep(sleep_rand)
 
-    pdb_api = apiDb(pghost, pguser, pgpassword, pgdatabase)   # PeeringDB API
+    pdb_api = apiDb(host, user, password, database)   # PeeringDB API
 
     # Load peering DB data
     if pdb_api.load_pdb_data():
 
-        # Perform imports into postgres
+        # Perform imports into clickhouse
         pdb_api.import_asn_info()
         pdb_api.import_ix_peering()
 
