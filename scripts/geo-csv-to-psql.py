@@ -28,7 +28,7 @@ import dbHandler
 logging.basicConfig(format='%(asctime)s | %(levelname)-8s | %(name)s[%(lineno)s] | %(message)s', level=logging.INFO)
 LOG = logging.getLogger("geo-csv-to-psql")
 
-SQL_INSERT = ("INSERT INTO geo_ip (family,ip,city,stateprov,country,latitude,longitude,"
+SQL_INSERT = ("INSERT INTO geo_ip (family,cidr,cidr_len,city,stateprov,country,latitude,longitude,"
               "timezone_offset, timezone_name, isp_name) VALUES ")
 
 
@@ -164,8 +164,9 @@ def import_dbip_csv(db, in_file):
                 if count:
                     sql_values += ','
 
-                sql_values += "(%d, '%s', '%s', '%s', '%s', %s, %s," % (addr_type,
-                                                                        ip,
+                sql_values += "(%d, '%s', %d, '%s', '%s', '%s', %s, %s," % (addr_type,
+                                                                        str(ip).split('/', 1)[0],
+                                                                        int(str(ip).split('/', 1)[1]),
                                                                         r[5].encode('ascii', 'ignore').decode('ascii'),
                                                                         r[4].encode('ascii', 'ignore').decode('ascii'),
                                                                         r[3],
