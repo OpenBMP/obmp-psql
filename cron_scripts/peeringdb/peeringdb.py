@@ -36,13 +36,13 @@ MAX_BULK = 1000
 
 # Upsert bulk query
 INSERT_INFO_ASN = {
-    "insert": "INSERT INTO info_asn (asn, as_name, org_id, org_name, remarks, address, city, state_prov, postal_code, country, source)",
+    "insert": "INSERT INTO info_asn (asn, as_name, org_id, org_name, remarks, address, city, state_prov, postal_code, country, source) ",
     "values":  "VALUES "
 }
 
 INSERT_PDB_IX_PEERS = {
-    "insert": ("INSERT INTO pdb_exchange_peers (ix_id,ix_name,ix_prefix_v4,ix_prefix_v6,rs_peer,peer_name,peer_ipv4,peer_ipv6,peer_asn,"
-               "speed,policy,poc_policy_email,poc_noc_email,ix_city,ix_country,ix_region) "),
+    "insert": "INSERT INTO pdb_exchange_peers (ix_id,ix_name,ix_prefix_v4,ix_prefix_v6,rs_peer,peer_name,peer_ipv4,peer_ipv6,peer_asn,"
+               "speed,policy,poc_policy_email,poc_noc_email,ix_city,ix_country,ix_region) ",
     "values": "VALUES "
 }
 
