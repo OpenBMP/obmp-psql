@@ -424,12 +424,12 @@ class apiDb:
 
         except (Exception, clickhouse_driver.IntegrityError) as error:
             self.conn.rollback()
-            logger.error(f"PSQL error: {error}")
+            logger.error(f"CH error: {error}")
             logger.debug(insert_stmt)
 
         except (Exception, clickhouse_driver.DatabaseError) as error:
             self.conn.rollback()
-            logger.error(f"PSQL error: {error}")
+            logger.error(f"CH error: {error}")
             logger.debug(insert_stmt)
 
 
