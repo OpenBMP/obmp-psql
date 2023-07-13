@@ -363,6 +363,7 @@ class apiDb:
         for entry in self.pdb_nets.values():
             asn = entry['asn']
             as_name=entry['name'][:240].replace("'", "''")
+            as_name=f"{as_name}"[:240].replace("\\", "")
             aka=entry['aka'][:240].replace("'", "''")
             org_name=f"{as_name} - {aka}"[:240].replace("'", "''")
 
@@ -382,8 +383,8 @@ class apiDb:
                 logger.error(f"{org_id} not in orgs dictionary, skipping")
                 continue
 
-            address1 = self.pdb_orgs[org_id]['address1'][:250]
-            address2 = self.pdb_orgs[org_id]['address2'][:250]
+            address1 = self.pdb_orgs[org_id]['address1'][:250].replace("\\", "")
+            address2 = self.pdb_orgs[org_id]['address2'][:250].replace("\\", "")
             address = f"{address1}, {address2}"[:240].replace("'", "''") # need to join address1 and 2 for DB
             city = self.pdb_orgs[org_id]['city'][:240].replace("'", "''")
             state_prov = self.pdb_orgs[org_id]['state'][:240].replace("'", "''")
