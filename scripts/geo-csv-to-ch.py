@@ -178,7 +178,7 @@ def import_dbip_csv(db, in_file):
             line_count += 1
 
             # bulk insert
-            if count >= 4000:
+            if count >= 100000:
                 total_count += count
                 LOG.info(f"Inserting {count} records, total {total_count}, line count {line_count}")
 
