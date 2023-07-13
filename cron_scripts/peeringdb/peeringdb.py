@@ -332,8 +332,8 @@ class apiDb:
                 logger.info(f"IX Peer Time: {t2}, number of peers processed: {processed}")
 
             # Append value to bulk update
-            value=(f"({ix_id}, '{ix_name}', {ix_prefix_v4}::inet, {ix_prefix_v6}::inet, {rs_peer}, '{peer_name[:254]}', "
-                   f"{peer_ipv4}::inet, {peer_ipv6}::inet, '{peer_asn}', '{speed}', '{policy}', "
+            value=(f"({ix_id}, '{ix_name}', {ix_prefix_v4}, {ix_prefix_v6}, {rs_peer}, '{peer_name[:254]}', "
+                   f"{peer_ipv4}, {peer_ipv6}, '{peer_asn}', '{speed}', '{policy}', "
                    f"'{poc_policy_email}', '{poc_noc_email}', '{ix_city[:128]}', '{ix_country}', '{ix_region[:128]}')")
 
             values_list.append(value)
