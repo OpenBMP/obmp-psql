@@ -356,7 +356,7 @@ class apiDb:
             return False
 
         # start time
-        t1=time.time()        
+        t1=time.time()
 
         # go through each AS and and grab data
         values_list = []
