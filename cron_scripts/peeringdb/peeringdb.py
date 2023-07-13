@@ -448,8 +448,8 @@ class apiDb:
               help="Clickhouse Database name",
               metavar="<string>", default="openbmp")
 @click.option('-s', '--sleep', 'sleep_secs',
-              help="Randomly sleep to delay connections to peeringdb (default 600)",
-              metavar="<int>", default="600")
+              help="Randomly sleep to delay connections to peeringdb (default 60)",
+              metavar="<int>", default="60")
 def main(host, user, password, database, sleep_secs):
 
     # Add a sleep before connecting to peeringDB
