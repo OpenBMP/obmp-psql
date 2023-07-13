@@ -368,7 +368,7 @@ class apiDb:
 
             route_server=entry['route_server'][:240].replace("'", "''")
             looking_glass=entry['looking_glass'][:240].replace("'", "''")
-            notes=entry['notes'][:1500]
+            notes=entry['notes'][:1500].replace("\\", "")
 
             remarks = f"route_server: {route_server}\n" if len(route_server) > 1 else ""
             remarks += f"looking_glass: {looking_glass}" if len(looking_glass) > 1 else ""
