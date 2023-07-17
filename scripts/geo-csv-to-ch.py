@@ -28,8 +28,8 @@ import dbHandler
 logging.basicConfig(format='%(asctime)s | %(levelname)-8s | %(name)s[%(lineno)s] | %(message)s', level=logging.INFO)
 LOG = logging.getLogger("geo-csv-to-ch")
 
-SQL_INSERT = ("INSERT INTO geo_ip (family, cidr, cidr_len, city, stateprov, country, latitude, longitude, "
-              "timezone_offset, timezone_name, isp_name) VALUES ")
+SQL_INSERT = ("INSERT INTO geo_ip (family, cidrv4, cidrv4_len, cidrv6, cidrv6_len, city, stateprov, "
+              "country, latitude, longitude, timezone_offset, timezone_name, isp_name) VALUES ")
 
 
 def import_maxmind_csv(db, mm_loc, mm_ipv4, mm_ipv6):
@@ -164,13 +164,18 @@ def import_dbip_csv(db, in_file):
                 if count:
                     sql_values += ','
 
-                sql_values += "(%d, '%s', %d, '%s', '%s', '%s', %s, %s," % (addr_type,
-                                                                        str(ip.split('/', 1)[0]),
-                                                                        int(ip.split('/', 1)[1]),
-                                                                        r[5].encode('ascii', 'ignore').decode('ascii'),
-                                                                        r[4].encode('ascii', 'ignore').decode('ascii'),
-                                                                        r[3],
-                                                                        r[6], r[7]);
+                ip_first = ip.first
+                ip_last = ip.last
+
+                sql_values += "(%d, '%s', %d, %d, '%s', '%s', '%s', %s, %s," % (addr_type,
+                                                                                ip,
+                                                                                ip_first,
+                                                                                ip_last,
+                                                                                r[5].encode('ascii', 'ignore').decode('ascii'),
+                                                                                r[4].encode('ascii', 'ignore').decode('ascii'),
+                                                                                r[3],
+                                                                                r[6], r[7]);
+
                 sql_values += "0, 'UTC', '') "
                 count += 1
 
@@ -178,7 +183,7 @@ def import_dbip_csv(db, in_file):
             line_count += 1
 
             # bulk insert
-            if count >= 100000:
+            if count >= 20000:
                 total_count += count
                 LOG.info(f"Inserting {count} records, total {total_count}, line count {line_count}")
 
