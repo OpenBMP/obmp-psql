@@ -18,32 +18,41 @@ import dbHandler
 # RR Database download sites
 # ----------------------------------------------------------------
 RR_DB_FTP = OrderedDict()
-
-# Only add RADB as it mirrors the others.
 RR_DB_FTP['radb'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'radb.db.gz'}
-
-#RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
-#RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
-# RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db.gz'}
-# RR_DB_FTP['afrinic'] = {'site': 'ftp.afrinic.net', 'path': '/pub/dbase/', 'filename': 'afrinic.db.gz'}
-# RR_DB_FTP['apnic'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route.gz'}
-# RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
-# RR_DB_FTP['apnic_v6'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route6.gz'}
-# RR_DB_FTP['ripe'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route.gz'}
-# RR_DB_FTP['ripe_v6'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route6.gz'}
+RR_DB_FTP['nttcom'] = {'site': 'rr1.ntt.net', 'path': '/nttcomRR/', 'filename': 'nttcom.db.gz'}
+RR_DB_FTP['level3'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'level3.db.gz'}
+RR_DB_FTP['arin'] = {'site': 'ftp.arin.net', 'path': '/pub/rr/', 'filename': 'arin.db.gz'}
+RR_DB_FTP['afrinic'] = {'site': 'ftp.afrinic.net', 'path': '/pub/dbase/', 'filename': 'afrinic.db.gz'}
+RR_DB_FTP['apnic'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route.gz'}
+RR_DB_FTP['jpirr'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'jpirr.db.gz'}
+RR_DB_FTP['apnic_v6'] = {'site': 'ftp.apnic.net', 'path': '/pub/apnic/whois/', 'filename': 'apnic.db.route6.gz'}
+RR_DB_FTP['ripe'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route.gz'}
+RR_DB_FTP['ripe_v6'] = {'site': 'ftp.ripe.net', 'path': '/ripe/dbase/split/', 'filename': 'ripe.db.route6.gz'}
+RR_DB_FTP['altdb'] = {'site': 'ftp.altdb.net', 'path': '/pub/altdb/', 'filename': 'altdb.db.gz'}
+RR_DB_FTP['lacnic'] = {'site': 'irr.lacnic.net', 'path': '/', 'filename': 'lacnic.db.gz'}
+RR_DB_FTP['bell'] = {'site': 'whois.in.bell.ca', 'path': '/', 'filename': 'bell.db.gz'}
+RR_DB_FTP['bboi'] = {'site': 'irr.bboi.net', 'path': '/', 'filename': 'bboi.db.gz'}
+RR_DB_FTP['tc'] = {'site': 'ftp.radb.net', 'path': '/radb/dbase/', 'filename': 'tc.db.gz'}
+RR_DB_FTP['idnic'] = {'site': 'irr-mirror.idnic.net', 'path': '/', 'filename': 'idnic.db.gz'}
 
 
 RR_DB_FILES = OrderedDict()
 RR_DB_FILES['radb'] = {'filename': 'radb.db.gz'}
-# RR_DB_FILES['nttcom'] = {'filename': 'nttcom.db.gz'}
-# RR_DB_FILES['level3'] = {'filename': 'level3.db.gz'}
-# RR_DB_FILES['arin'] = {'filename': 'arin.db.gz'}
-# RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
-# RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
-# RR_DB_FILES['jpirr'] = {'filename': 'jpirr.db.gz'}
-# RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
-# RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
-# RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
+RR_DB_FILES['nttcom'] = {'filename': 'nttcom.db.gz'}
+RR_DB_FILES['level3'] = {'filename': 'level3.db.gz'}
+RR_DB_FILES['arin'] = {'filename': 'arin.db.gz'}
+RR_DB_FILES['afrinic'] = {'filename': 'afrinic.db.gz'}
+RR_DB_FILES['apnic'] = {'filename': 'apnic.db.route.gz'}
+RR_DB_FILES['jpirr'] = {'filename': 'jpirr.db.gz'}
+RR_DB_FILES['apnic_v6'] = {'filename': 'apnic.db.route6.gz'}
+RR_DB_FILES['ripe'] = {'filename': 'ripe.db.route.gz'}
+RR_DB_FILES['ripe_v6'] = {'filename': 'ripe.db.route6.gz'}
+RR_DB_FILES['altdb'] = {'filename': 'altdb.db.gz'}
+RR_DB_FILES['lacnic'] = {'filename': 'lacnic.db.gz'}
+RR_DB_FILES['bell'] = {'filename': 'bell.db.gz'}
+RR_DB_FILES['bboi'] = {'filename': 'bboi.db.gz'}
+RR_DB_FILES['tc'] = {'filename': 'tc.db.gz'}
+RR_DB_FILES['idnic'] = {'filename': 'idnic.db.gz'}
 
 # ----------------------------------------------------------------
 # Whois mapping
