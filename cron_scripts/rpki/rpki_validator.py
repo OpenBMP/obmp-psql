@@ -55,7 +55,8 @@ def load_export(db, server, rpkiuser, rpkipassword):
 
         asn, prefix_full, max_length = line['asn'], line['prefix'], line['maxLength']
         # remove the characters "AS", some RPKI vendors include this in their data
-        asn = asn.replace('AS','')
+        if isinstance(asn, str) and asn.startswith('AS'):
+            asn = asn.replace('AS','')
 
         prefix, prefix_len = prefix_full.split('/')[0], prefix_full.split('/')[1]
 
